@@ -1,0 +1,35 @@
+# MK-mini 默认参数。实车首次测试建议保持保守限速，确认安全后再逐步调整。
+
+yhs_can_control_node:
+  ros__parameters:
+    # SocketCAN 接口名；Thor 上需要先执行 ip link set can0 up。
+    can_name: "can0"
+    # 车辆轴距，单位 m；速度积分和 Ackermann 换算都会用到。
+    wheel_base: 0.6
+    # 是否发布 odom -> base_link TF；如果外部定位也发布同名 TF，应关闭。
+    publish_odom_tf: true
+    odom_frame_id: "odom"
+    base_frame_id: "base_link"
+    # chassis_info_fb.ultrasonic 中的传感器顺序：
+    # front_right, front_left, left_front, left_rear,
+    # rear_left, rear_right, right_rear, right_front.
+    ultrasonic_number: [0, 1, 2, 3, 4, 5, 6, 7]
+
+cmd_vel_to_ctrl_cmd_node:
+  ros__parameters:
+    # Nav2 默认发布 /cmd_vel，本节点把它转换为底盘 /ctrl_cmd。
+    input_topic: "cmd_vel"
+    output_topic: "ctrl_cmd"
+    wheel_base: 0.6
+    # 以固定频率发布控制指令，起到底盘保活作用。
+    ctrl_cmd_publish_rate_hz: 50.0
+    # 超过该时间没有新 /cmd_vel 时自动发布 0 速。
+    cmd_vel_timeout_sec: 0.3
+    max_velocity_mps: 0.3
+    max_steering_deg: 25.0
+    # 默认禁止倒车，实车确认安全后才建议改为 true。
+    allow_reverse: false
+    # Jazzy/Nav2 默认使用 Twist；如果上游发布 TwistStamped，再改为 true。
+    use_stamped_cmd_vel: false
+    forward_gear: 1
+    reverse_gear: 2
