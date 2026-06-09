@@ -1,0 +1,8 @@
+yhs_can_control_node:
+  ros__parameters:
+    can_name: can0
+    wheel_base: 0.6
+    publish_odom_tf: false
+    odom_frame_id: odom
+    base_frame_id: base_link
+    ultrasonic_number: [0, 1, 2, 3, 4, 5, 6, 7]

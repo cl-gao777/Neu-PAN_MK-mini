@@ -1,0 +1,28 @@
+ackermann_safety_bridge:
+  ros__parameters:
+    input_topic: /neupan/ackermann_cmd
+    output_topic: /ctrl_cmd
+    arm_topic: /neupan/drive_enable
+    emergency_stop_topic: /neupan/emergency_stop
+    feedback_topic: /chassis_info_fb
+    status_topic: /neupan/safety_status
+    publish_rate_hz: 50.0
+    command_timeout_sec: 0.3
+    feedback_timeout_sec: 0.5
+    localization_timeout_sec: 0.3
+    max_speed_mps: 0.3
+    max_steering_deg: 25.0
+    allow_reverse: false
+    forward_gear: 4
+    reverse_gear: 2
+    require_feedback: true
+    require_localization: true
+    require_auto_can_mode: true
+    localization_target_frame: map
+    localization_source_frame: base_link
+
+legacy_neupan_twist_adapter:
+  ros__parameters:
+    input_topic: /neupan_cmd_vel
+    output_topic: /neupan/ackermann_cmd
+    frame_id: base_link

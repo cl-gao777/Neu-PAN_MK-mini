@@ -1,0 +1,25 @@
+repositories:
+  src/neupan_ros2:
+    type: git
+    url: https://github.com/KevinLADLee/neupan_ros2.git
+    version: main
+  src/livox_ros_driver2:
+    type: git
+    url: https://github.com/Livox-SDK/livox_ros_driver2.git
+    version: master
+  src/FAST_LIO:
+    type: git
+    url: https://github.com/hku-mars/FAST_LIO.git
+    version: ROS2
+  src/yhs_robot_description:
+    type: git
+    url: https://github.com/YUHESEN-Robot/YHS-ROBOT-Description.git
+    version: main
+  third_party/NeuPAN:
+    type: git
+    url: https://github.com/hanruihua/NeuPAN.git
+    version: main
+  third_party/ir-sim:
+    type: git
+    url: https://github.com/hanruihua/ir-sim.git
+    version: main

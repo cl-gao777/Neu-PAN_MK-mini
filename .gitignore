@@ -1,9 +1,41 @@
+# Local Git metadata backups from monorepo migration
+.local_git_backups/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+**/.venv/
+venv/
+**/venv/
+
+# ROS 2 / colcon generated output
 build/
 install/
 log/
+**/build/
+**/install/
+**/log/
 
-*.pyc
-__pycache__/
+# Local API/tool scratch data
+.api_tmp/
+**/.api_tmp/
 
+# Environment and editor-local files
+.env
+.env.*
+!.env.example
 .vscode/
 .idea/
+*.swp
+*.swo
+
+# OS files
+Thumbs.db
+.DS_Store
