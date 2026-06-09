@@ -30,6 +30,20 @@
 使用 `config/neupan_mkmini.yaml` 作为几何和训练基线。启动 NeuPAN 前，必须替换
 `REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT`。
 
+当前仓库不会假设已经有 MK-mini 专用 DUNE checkpoint。未完成训练前，只能验证
+`/neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd` 的桥接和安全逻辑，不能进行
+NeuPAN 实车闭环复现。训练参数以 MK-mini 实车几何为准：`wheelbase=0.6`、
+`length=0.84-0.90`、`width=0.60`。
+
+完成训练并替换 checkpoint 后，可显式启动 NeuPAN：
+
+```bash
+ros2 launch mkmini_neupan_bringup full_stack.launch.py start_neupan:=true
+```
+
+若 `neupan_ros2` 未通过 `mkmini_neupan.repos` 导入并构建，或 checkpoint 仍是占位符，
+`neupan.launch.py` 会直接报错退出，避免进入没有算法输出的假闭环状态。
+
 ## 推荐的上游改进
 
 对上游 wrapper 建立 fork 后，可在阿克曼模式下直接向 `/neupan/ackermann_cmd`

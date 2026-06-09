@@ -65,14 +65,24 @@ PYTHONPATH=src/mkmini_neupan_bridge \
 2. 使用实测的 LiDAR 到 IMU/`base_link` 外参启动 FAST-LIO2。
 3. 使用针对 MK-mini 外形训练的 DUNE checkpoint 启动 NeuPAN ROS2。
 
-然后启动集成栈：
+然后启动底盘、感知、SLAM、Nav2 与安全桥集成栈：
 
 ```bash
 ros2 launch mkmini_neupan_bringup full_stack.launch.py
 ```
 
-`full_stack.launch.py` 有意不启动 Mid-360、FAST-LIO2 和 NeuPAN，因为它们的设备地址、
-外参和 DUNE checkpoint 必须在真机上提供并验证。
+`full_stack.launch.py` 默认不启动 Mid-360、FAST-LIO2 和 NeuPAN，因为它们的设备地址、
+外参和 DUNE checkpoint 必须在真机上提供并验证。训练并替换 MK-mini DUNE checkpoint 后，
+才允许显式打开 NeuPAN：
+
+```bash
+ros2 launch mkmini_neupan_bringup full_stack.launch.py start_neupan:=true
+```
+
+如果 `config/neupan_mkmini.yaml` 仍包含
+`REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT`，NeuPAN launch 会立即失败。请先按
+MK-mini 几何参数训练 DUNE：`wheelbase=0.6`、`length=0.84-0.90`、`width=0.60`，
+然后把 `dune_checkpoint` 替换为训练好的 checkpoint 绝对路径。
 
 完成架空轮安全检查后，使用以下命令解锁：
 

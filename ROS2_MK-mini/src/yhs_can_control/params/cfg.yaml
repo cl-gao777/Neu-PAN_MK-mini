@@ -31,5 +31,5 @@ cmd_vel_to_ctrl_cmd_node:
     allow_reverse: false
     # Jazzy/Nav2 默认使用 Twist；如果上游发布 TwistStamped，再改为 true。
     use_stamped_cmd_vel: false
-    forward_gear: 1
+    forward_gear: 4
     reverse_gear: 2

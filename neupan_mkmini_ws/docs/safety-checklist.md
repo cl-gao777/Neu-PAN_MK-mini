@@ -32,3 +32,9 @@
 - 始终保留至少 2 m 的无障碍停车空间。
 - 在引入真人横穿前，先使用柔软替代障碍物测试。
 - 在超时停车功能得到可靠验证前，禁止进行动态横穿测试。
+
+## NeuPAN 启动前附加检查
+
+- [ ] `/neupan_cmd_vel` 与 `/neupan/ackermann_cmd` 均达到 10 Hz 以上。
+- [ ] `neupan_mkmini.yaml` 已替换为训练好的 MK-mini DUNE checkpoint。
+- [ ] `full_stack.launch.py start_neupan:=true` 只在上述条件满足后使用。

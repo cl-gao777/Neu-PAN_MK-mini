@@ -1,5 +1,9 @@
 import math
+from pathlib import Path
+import sys
 import unittest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from mkmini_neupan_bridge.adapters import (
     chassis_feedback_is_healthy,

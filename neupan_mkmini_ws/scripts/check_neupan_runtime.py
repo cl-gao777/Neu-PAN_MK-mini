@@ -6,6 +6,11 @@ import sys
 
 
 REQUIRED_MODULES = ("torch", "cvxpy", "cvxpylayers", "neupan")
+CHECKPOINT_PLACEHOLDER = "REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT"
+
+
+def workspace_root() -> pathlib.Path:
+    return pathlib.Path(__file__).resolve().parents[1]
 
 
 def main() -> int:
@@ -24,12 +29,21 @@ def main() -> int:
         print(f"OK {module_name}: {version}")
 
     if "--require-checkpoint" in sys.argv:
-        config = pathlib.Path(
-            "src/mkmini_neupan_bringup/config/neupan_mkmini.yaml"
-        ).read_text(encoding="utf-8")
-        if "REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT" in config:
+        config_path = (
+            workspace_root()
+            / "src"
+            / "mkmini_neupan_bringup"
+            / "config"
+            / "neupan_mkmini.yaml"
+        )
+        config = config_path.read_text(encoding="utf-8")
+        if CHECKPOINT_PLACEHOLDER in config:
             failed = True
-            print("MISSING trained MK-mini DUNE checkpoint in neupan_mkmini.yaml")
+            print(
+                "MISSING trained MK-mini DUNE checkpoint in neupan_mkmini.yaml. "
+                "Train MK-mini DUNE with wheelbase=0.6, length=0.84-0.90, "
+                "width=0.60, then replace the dune_checkpoint placeholder."
+            )
 
     return int(failed)
 
