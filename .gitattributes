@@ -8,6 +8,7 @@ CMakeLists.txt text eol=lf
 
 *.bash text eol=lf
 *.cfg text eol=lf
+Dockerfile text eol=lf
 *.cmake text eol=lf
 *.cpp text eol=lf
 *.dbc -text
