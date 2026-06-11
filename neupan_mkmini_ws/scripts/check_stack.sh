@@ -3,6 +3,7 @@ set -euo pipefail
 
 required_topics=(
   /livox/lidar
+  /livox/points
   /odom
   /scan
   /map

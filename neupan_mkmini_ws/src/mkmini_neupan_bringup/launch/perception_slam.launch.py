@@ -19,7 +19,7 @@ def generate_launch_description():
 
     return LaunchDescription(
         [
-            DeclareLaunchArgument("cloud_topic", default_value="/livox/lidar"),
+            DeclareLaunchArgument("cloud_topic", default_value="/livox/points"),
             DeclareLaunchArgument("scan_topic", default_value="/scan"),
             DeclareLaunchArgument("use_sim_time", default_value="false"),
             DeclareLaunchArgument(

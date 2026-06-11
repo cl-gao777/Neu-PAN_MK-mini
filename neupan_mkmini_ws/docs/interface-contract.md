@@ -16,7 +16,8 @@
 
 | 话题 | 类型 | 发布者 | 使用者 |
 | --- | --- | --- | --- |
-| `/livox/lidar` | `sensor_msgs/PointCloud2` | Livox 驱动 | FAST-LIO2、pointcloud-to-laserscan |
+| `/livox/lidar` | `livox_ros_driver2/msg/CustomMsg` | Livox 驱动 | FAST-LIO2、custom-msg-to-pointcloud2 |
+| `/livox/points` | `sensor_msgs/PointCloud2` | custom-msg-to-pointcloud2 | pointcloud-to-laserscan、RViz |
 | `/scan` | `sensor_msgs/LaserScan` | pointcloud-to-laserscan | SLAM Toolbox、Nav2、NeuPAN |
 | `/plan` | `nav_msgs/Path` | Nav2 planner | NeuPAN |
 | `/neupan_cmd_vel` | `geometry_msgs/Twist` | 上游 NeuPAN ROS2 | 仅兼容适配器 |

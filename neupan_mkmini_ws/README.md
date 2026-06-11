@@ -2,7 +2,8 @@
 
 本工作区提供在阿克曼转向 MK-mini 上低速复现 NeuPAN 所需的集成层：
 
-`Mid-360 -> FAST-LIO2 -> slam_toolbox -> Nav2 全局路径 -> NeuPAN -> Ackermann 安全桥 -> MK-mini`
+`Mid-360 CustomMsg -> FAST-LIO2`，同时通过
+`CustomMsg -> /livox/points -> /scan -> slam_toolbox -> Nav2 全局路径 -> NeuPAN -> Ackermann 安全桥 -> MK-mini`
 
 仓库不会直接包含上游项目源码。请使用 `mkmini_neupan.repos` 导入依赖，并将现有
 `yhs_can_control` 与 `yhs_can_interfaces` 包复制到 `src/`。
@@ -53,15 +54,18 @@ colcon build --symlink-install \
 任何装有 Python 3 的主机都可以运行纯安全逻辑测试：
 
 ```bash
-PYTHONPATH=src/mkmini_neupan_bridge \
-  python3 -m unittest discover -s src/mkmini_neupan_bridge/test -p 'test_*.py' -v
+python3 -m pytest
+
+# Windows local development:
+.venv\Scripts\python.exe -m pytest
 ```
 
 ## 启动顺序
 
 首先启动外部硬件与定位组件：
 
-1. 启动 Mid-360 的 `livox_ros_driver2`。
+1. 启动 Mid-360 的 `livox_ros_driver2`。本仓库提供了保持 CustomMsg 输出的封装：
+   `ros2 launch mkmini_neupan_bringup mid360_driver.launch.py`。
 2. 使用实测的 LiDAR 到 IMU/`base_link` 外参启动 FAST-LIO2。
 3. 使用针对 MK-mini 外形训练的 DUNE checkpoint 启动 NeuPAN ROS2。
 
@@ -71,8 +75,15 @@ PYTHONPATH=src/mkmini_neupan_bridge \
 ros2 launch mkmini_neupan_bringup full_stack.launch.py
 ```
 
-`full_stack.launch.py` 默认不启动 Mid-360、FAST-LIO2 和 NeuPAN，因为它们的设备地址、
-外参和 DUNE checkpoint 必须在真机上提供并验证。训练并替换 MK-mini DUNE checkpoint 后，
+`full_stack.launch.py` 默认不启动 Mid-360、FAST-LIO2 和 NeuPAN，避免抢占雷达 UDP 端口或使用未经验证的
+外参和 DUNE checkpoint。确认 MID-360 使用 `192.168.1.3`、Thor 网口使用 `192.168.1.50/24` 后，
+可以显式打开本仓库的 MID-360 driver：
+
+```bash
+ros2 launch mkmini_neupan_bringup full_stack.launch.py start_mid360:=true
+```
+
+训练并替换 MK-mini DUNE checkpoint 后，
 才允许显式打开 NeuPAN：
 
 ```bash

@@ -17,8 +17,10 @@
 
 ## 点云切片
 
-启动 `pointcloud_to_laserscan` 前，应将 `livox_ros_driver2` 配置为发布
-`sensor_msgs/PointCloud2`，而不是只发布 Livox 自定义消息。
+启动 `pointcloud_to_laserscan` 前，应保持 `livox_ros_driver2` 发布
+`livox_ros_driver2/msg/CustomMsg` 给 FAST-LIO2 使用，并使用
+`custom_msg_to_pointcloud2` 将 `/livox/lidar` 转换为 `/livox/points`
+(`sensor_msgs/PointCloud2`) 给 `pointcloud_to_laserscan` 使用。
 
 建议从以下参数开始：
 
