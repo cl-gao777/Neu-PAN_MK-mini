@@ -14,28 +14,28 @@ from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    share_dir = get_package_share_directory("yhs_can_control")
-    parameter_file = LaunchConfiguration("params_file")
+    share_dir = get_package_share_directory('yhs_can_control')
+    parameter_file = LaunchConfiguration('params_file')
 
     params_declare = DeclareLaunchArgument(
-        "params_file",
-        default_value=os.path.join(share_dir, "params", "cfg.yaml"),
-        description="ROS 2 参数文件路径。",
+        'params_file',
+        default_value=os.path.join(share_dir, 'params', 'cfg.yaml'),
+        description='ROS 2 参数文件路径。',
     )
 
     yhs_can_control_node = Node(
-        package="yhs_can_control",
-        executable="yhs_can_control_node",
-        name="yhs_can_control_node",
-        output="screen",
+        package='yhs_can_control',
+        executable='yhs_can_control_node',
+        name='yhs_can_control_node',
+        output='screen',
         parameters=[parameter_file],
     )
 
     cmd_vel_adapter_node = Node(
-        package="yhs_can_control",
-        executable="cmd_vel_to_ctrl_cmd_node",
-        name="cmd_vel_to_ctrl_cmd_node",
-        output="screen",
+        package='yhs_can_control',
+        executable='cmd_vel_to_ctrl_cmd_node',
+        name='cmd_vel_to_ctrl_cmd_node',
+        output='screen',
         parameters=[parameter_file],
     )
 

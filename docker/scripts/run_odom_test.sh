@@ -10,6 +10,14 @@
 # The yhs_can_control launch must already be running in another terminal.
 
 set -euo pipefail
+export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
+
+safe_source() {
+  set +u
+  source "$1"
+  set -u
+}
+
 
 ROS_SETUP="/opt/ros/jazzy/setup.bash"
 CHASSIS_INSTALL="/workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash"
@@ -60,8 +68,8 @@ if [[ ! -f "${CHASSIS_INSTALL}" ]]; then
     exit 1
 fi
 
-source "${ROS_SETUP}"
-source "${CHASSIS_INSTALL}"
+safe_source "${ROS_SETUP}"
+safe_source "${CHASSIS_INSTALL}"
 
 echo "=== Odometry Accuracy Test ==="
 echo "  Target distance: ${TARGET_DISTANCE} m"

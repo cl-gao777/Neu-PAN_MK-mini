@@ -8,6 +8,14 @@
 #   bash run_tests.sh --bridge-only    # NeuPAN bridge Python pytest only
 
 set -euo pipefail
+export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
+
+safe_source() {
+  set +u
+  source "$1"
+  set -u
+}
+
 
 ROS_SETUP="/opt/ros/jazzy/setup.bash"
 CHASSIS_WS="/workspaces/MK-mini_ws/ROS2_MK-mini"
@@ -30,7 +38,7 @@ if [[ ! -f "${ROS_SETUP}" ]]; then
     exit 1
 fi
 
-source "${ROS_SETUP}"
+safe_source "${ROS_SETUP}"
 
 PASS=0
 FAIL=0

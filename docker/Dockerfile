@@ -12,6 +12,7 @@
 FROM ros:jazzy
 
 ENV DEBIAN_FRONTEND=noninteractive
+ENV RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 
 # Install system dependencies matching bootstrap_jazzy.sh.
 # Dev tools (git, vim, ping, net-tools) are included for interactive use.

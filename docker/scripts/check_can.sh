@@ -9,6 +9,14 @@
 #   bash check_can.sh 0            # Status + continuous candump
 
 set -euo pipefail
+export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
+
+safe_source() {
+  set +u
+  source "$1"
+  set -u
+}
+
 
 CAN_IFACE="can0"
 DURATION="${1:--1}"   # -1 = status only, 0 = continuous, N = seconds

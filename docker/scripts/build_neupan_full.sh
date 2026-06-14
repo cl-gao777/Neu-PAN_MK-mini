@@ -6,6 +6,14 @@
 # Usage: bash build_neupan_full.sh
 
 set -euo pipefail
+export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
+
+safe_source() {
+  set +u
+  source "$1"
+  set -u
+}
+
 
 ROS_SETUP="/opt/ros/jazzy/setup.bash"
 NEUPAN_WS="/workspaces/MK-mini_ws/neupan_mkmini_ws"
@@ -21,7 +29,7 @@ if [[ ! -d "${NEUPAN_WS}" ]]; then
     exit 1
 fi
 
-source "${ROS_SETUP}"
+safe_source "${ROS_SETUP}"
 cd "${NEUPAN_WS}"
 
 # ---- Pre-flight: one-time initialization checks ----
@@ -31,7 +39,7 @@ if [[ ! -d src/neupan_ros2 || ! -d src/livox_ros_driver2 || ! -d src/FAST_LIO ]]
     echo "--- External repos not yet imported ---"
     echo "Run once (inside container):"
     echo "  cd ${NEUPAN_WS}"
-    echo "  source /opt/ros/jazzy/setup.bash"
+    echo "  safe_source "/opt/ros/jazzy/setup.bash""
     echo "  vcs import . < mkmini_neupan.repos"
     echo ""
     MISSING=1

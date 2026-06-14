@@ -6,6 +6,14 @@
 # Usage: bash build_chassis_sdk.sh
 
 set -euo pipefail
+export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
+
+safe_source() {
+  set +u
+  source "$1"
+  set -u
+}
+
 
 ROS_SETUP="/opt/ros/jazzy/setup.bash"
 CHASSIS_WS="/workspaces/MK-mini_ws/ROS2_MK-mini"
@@ -25,7 +33,7 @@ echo "=== Building MK-mini Chassis SDK ==="
 echo "  Workspace: ${CHASSIS_WS}"
 echo ""
 
-source "${ROS_SETUP}"
+safe_source "${ROS_SETUP}"
 cd "${CHASSIS_WS}"
 
 # Clean stale build artifacts from a different architecture (e.g. x86_64 -> ARM64)

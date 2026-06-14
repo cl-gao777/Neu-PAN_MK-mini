@@ -13,6 +13,14 @@
 #          or in a controlled test area.
 
 set -euo pipefail
+export AMENT_TRACE_SETUP_FILES="${AMENT_TRACE_SETUP_FILES:-}"
+
+safe_source() {
+  set +u
+  source "$1"
+  set -u
+}
+
 
 ROS_SETUP="/opt/ros/jazzy/setup.bash"
 CHASSIS_INSTALL="/workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash"
@@ -50,9 +58,9 @@ if [[ ! -f "${ROS_SETUP}" ]]; then
 fi
 
 # Source ROS 2 unconditionally; source chassis install if it exists
-source "${ROS_SETUP}"
+safe_source "${ROS_SETUP}"
 if [[ -f "${CHASSIS_INSTALL}" ]]; then
-    source "${CHASSIS_INSTALL}"
+    safe_source "${CHASSIS_INSTALL}"
 fi
 
 case "${COMMAND}" in
