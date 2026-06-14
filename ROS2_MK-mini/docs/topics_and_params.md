@@ -80,7 +80,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
-| `can_name` | `can0` | SocketCAN 接口名称。 |
+| `can_name` | `can4` | SocketCAN 接口名称；当前 Thor + PEAK PCAN-USB 使用 `can4`，可按实际接口覆盖。 |
 | `wheel_base` | `0.6` | 轴距，单位米，用于里程计回退积分。 |
 | `publish_odom_tf` | `true` | 是否发布 `odom -> base_link` TF。 |
 | `odom_frame_id` | `odom` | 里程计父坐标系。 |

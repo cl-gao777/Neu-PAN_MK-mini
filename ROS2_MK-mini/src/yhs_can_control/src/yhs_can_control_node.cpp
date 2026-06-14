@@ -37,7 +37,7 @@ CanControl::CanControl(rclcpp::Node::SharedPtr node)
 : node_(std::move(node))
 {
   // 参数从 cfg.yaml 读取；没有配置时使用保守默认值。
-  if_name_ = declare_and_get<std::string>(node_, "can_name", "can0");
+  if_name_ = declare_and_get<std::string>(node_, "can_name", "can4");
   wheel_base_ = declare_and_get<double>(node_, "wheel_base", 0.6);
   publish_odom_tf_ = declare_and_get<bool>(node_, "publish_odom_tf", true);
   odom_frame_id_ = declare_and_get<std::string>(node_, "odom_frame_id", "odom");
@@ -504,7 +504,7 @@ void CanControl::publish_odom_message(
 
 bool CanControl::run()
 {
-  // 使用 Linux SocketCAN 打开 can0/canX，要求系统已提前 ip link set can0 up。
+  // 使用 Linux SocketCAN 打开 canX，要求系统已提前配置并启动对应 CAN 接口。
   can_socket_ = ::socket(PF_CAN, SOCK_RAW, CAN_RAW);
   if (can_socket_ < 0) {
     RCLCPP_ERROR_STREAM(node_->get_logger(), "打开 CAN socket 失败：" << std::strerror(errno));

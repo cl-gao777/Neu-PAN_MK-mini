@@ -18,10 +18,11 @@ safe_source() {
 }
 
 
-CAN_IFACE="can0"
+CAN_IFACE="${CAN_IFACE:-can4}"
 DURATION="${1:--1}"   # -1 = status only, 0 = continuous, N = seconds
 
 echo "=== CAN Interface Status ==="
+echo "[INFO] CAN interface: ${CAN_IFACE}"
 
 if [[ ! -e "/sys/class/net/${CAN_IFACE}" ]]; then
     echo "ERROR: ${CAN_IFACE} interface not found." >&2

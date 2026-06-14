@@ -29,11 +29,11 @@
 **CAN 总线：**
 
 ```bash
-sudo ip link set can0 down || true
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set can0 up
-ip -details link show can0
-candump can0           # 确认底盘有 CAN 帧输出
+sudo ip link set can4 down || true
+sudo ip link set can4 type can bitrate 500000
+sudo ip link set can4 up
+ip -details link show can4
+candump can4           # 确认底盘有 CAN 帧输出
 ```
 
 **LiDAR 网络：**
@@ -295,7 +295,7 @@ bash docker/scripts/run_tests.sh --bridge-only
 
 | 操作 | 在哪里执行 | 命令 |
 |---|---|---|
-| CAN 接口配置 | **宿主机** | `sudo ip link set can0 up type can bitrate 500000` |
+| CAN 接口配置 | **宿主机** | `sudo ip link set can4 up type can bitrate 500000` |
 | LiDAR 网络配置 | **宿主机** | `sudo ip addr add 192.168.1.50/24 dev eth0` |
 | 构建 Docker 镜像 | **宿主机** | `cd docker && docker build -t mkmini-jazzy:dev .` |
 | 启动容器 | **宿主机** | `bash docker/run_mkmini_dev.sh` |
@@ -313,8 +313,8 @@ bash docker/scripts/run_tests.sh --bridge-only
 
 | 现象 | 可能原因 | 解决方法 |
 |---|---|---|
-| `can0: No such device` | CAN 未在宿主机配置 | 在 Thor 宿主机上执行 `sudo ip link set can0 up type can bitrate 500000`，确认 `ip link show can0` 存在且 UP |
-| `candump can0` 无数据 | 底盘未上电/急停/CAN 接线 | 检查底盘电源、急停状态、CAN 适配器连接，在宿主机上排查 |
+| `can4: No such device` | CAN 未在宿主机配置 | 在 Thor 宿主机上执行 `sudo ip link set can4 up type can bitrate 500000`，确认 `ip link show can4` 存在且 UP |
+| `candump can4` 无数据 | 底盘未上电/急停/CAN 接线 | 检查底盘电源、急停状态、CAN 适配器连接，在宿主机上排查 |
 | 无法连接 Livox LiDAR | 网口 IP 不是 `192.168.1.50/24` | 宿主机上：`sudo ip addr add 192.168.1.50/24 dev eth0` |
 | `colcon build` 失败 | 跨架构残留或依赖缺失 | `rm -rf build install log` 后重试 |
 | `rosdep: command not found` | rosdep 未初始化 | 容器内手动执行 `rosdep init && rosdep update` |

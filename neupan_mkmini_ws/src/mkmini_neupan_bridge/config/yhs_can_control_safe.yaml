@@ -1,6 +1,6 @@
 yhs_can_control_node:
   ros__parameters:
-    can_name: can0
+    can_name: can4
     wheel_base: 0.6
     publish_odom_tf: false
     odom_frame_id: odom

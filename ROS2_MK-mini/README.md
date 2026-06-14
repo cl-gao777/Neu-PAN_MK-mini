@@ -15,7 +15,7 @@
 
 核心能力：
 
-- 通过 `can0` 与 MK-mini 底盘通信。
+- 通过 `can4` 与 MK-mini 底盘通信；`can_name` 参数仍可覆盖为其他 SocketCAN 接口。
 - 将底盘 CAN 反馈解析为 ROS 2 话题。
 - 发布 `/odom` 里程计和 `odom -> base_link` TF。
 - 提供 `cmd_vel_to_ctrl_cmd_node`，把 Nav2 或其他上层控制器的 `/cmd_vel` 转为 MK-mini 底盘控制命令 `/ctrl_cmd`。
@@ -48,7 +48,7 @@
 - Ubuntu 24.04
 - ROS 2 Jazzy
 - SocketCAN 工具链
-- 一路可用 CAN 设备，默认接口名为 `can0`
+- 一路可用 CAN 设备，当前 Thor + PEAK PCAN-USB 默认接口名为 `can4`
 - MK-mini 底盘及其 CAN 线束
 
 推荐在原生 Linux 路径下运行，例如：
@@ -86,18 +86,18 @@ source install/setup.bash
 
 ## 配置 CAN
 
-默认使用 `can0`，波特率为 `500000`：
+当前 Thor + PEAK PCAN-USB 默认使用 `can4`，波特率为 `500000`：
 
 ```bash
-sudo ip link set can0 down || true
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set can0 up
+sudo ip link set can4 down || true
+sudo ip link set can4 type can bitrate 500000
+sudo ip link set can4 up
 ```
 
 检查 CAN 总线是否有数据：
 
 ```bash
-candump can0
+candump can4
 ```
 
 如果 `candump` 没有任何输出，需要先检查底盘供电、CAN 线束、终端电阻、接口名和波特率。
@@ -264,8 +264,8 @@ colcon test-result --verbose
 
 检查顺序：
 
-1. `can0` 是否存在并已 `UP`。
-2. `candump can0` 是否能看到底盘 CAN 帧。
+1. `can4` 是否存在并已 `UP`。
+2. `candump can4` 是否能看到底盘 CAN 帧。
 3. `/chassis_info_fb` 是否有数据。
 4. `/cmd_vel` 是否有发布。
 5. `/ctrl_cmd` 是否由适配节点输出。

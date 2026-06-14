@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ros-jazzy-rmw-cyclonedds-cpp \
     ros-jazzy-slam-toolbox \
     can-utils \
+    iproute2 \
     python3-pytest \
     git \
     vim \

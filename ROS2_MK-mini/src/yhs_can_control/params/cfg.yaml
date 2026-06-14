@@ -2,8 +2,8 @@
 
 yhs_can_control_node:
   ros__parameters:
-    # SocketCAN 接口名；Thor 上需要先执行 ip link set can0 up。
-    can_name: "can0"
+    # SocketCAN 接口名；当前 Thor + PEAK PCAN-USB 部署使用 can4。
+    can_name: "can4"
     # 车辆轴距，单位 m；速度积分和 Ackermann 换算都会用到。
     wheel_base: 0.6
     # 是否发布 odom -> base_link TF；如果外部定位也发布同名 TF，应关闭。
@@ -25,7 +25,7 @@ cmd_vel_to_ctrl_cmd_node:
     ctrl_cmd_publish_rate_hz: 50.0
     # 超过该时间没有新 /cmd_vel 时自动发布 0 速。
     cmd_vel_timeout_sec: 0.3
-    max_velocity_mps: 0.3
+    max_velocity_mps: 2.0
     max_steering_deg: 25.0
     # 默认禁止倒车，实车确认安全后才建议改为 true。
     allow_reverse: false
