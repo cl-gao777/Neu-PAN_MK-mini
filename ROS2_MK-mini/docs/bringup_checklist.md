@@ -17,14 +17,15 @@
 启动 CAN 接口：
 
 ```bash
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set can0 up
-ip -details link show can0
+sudo ip link set can4 down || true
+sudo ip link set can4 type can bitrate 500000
+sudo ip link set can4 up
+ip -details link show can4
 ```
 
 预期结果：
 
-- [ ] `can0` 存在。
+- [ ] `can4` 存在；如果 Thor 上接口名不同，已按 `ip link` 结果覆盖 `can_name`。
 - [ ] 波特率为 `500000`。
 - [ ] 接口状态为 `UP`。
 - [ ] 没有反复出现 bus-off 或重启错误。
@@ -32,7 +33,7 @@ ip -details link show can0
 检查底盘原始 CAN 数据：
 
 ```bash
-candump can0
+candump can4
 ```
 
 预期结果：
@@ -62,7 +63,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 - [ ] `yhs_can_control_node` 正常启动。
 - [ ] `cmd_vel_to_ctrl_cmd_node` 正常启动。
-- [ ] 没有关于 `can0` 的致命错误。
+- [ ] 没有关于 `can4` 或实际 `can_name` 的致命错误。
 - [ ] 没有关于 `ultrasonic_number` 的致命错误。
 
 ## 4. ROS 话题检查
@@ -195,9 +196,9 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 
 | 现象 | 检查 | 可能原因 | 下一步 |
 | --- | --- | --- | --- |
-| 缺少 `can0` | `ip link` | 驱动或适配器未加载 | 检查 USB/PCI 适配器、驱动和接口名称。 |
-| `candump can0` 没有帧 | `candump can0` | 接线、波特率、底盘电源或急停问题 | 重新检查 CANH/CANL、500 kbit/s、电源和急停。 |
-| launch 无法打开 CAN | launch 日志、`ip link` | `can0` 未启动或名称错误 | 启动 CAN，或设置 `can_name`。 |
+| 缺少 `can4` | `ip link` | 驱动或适配器未加载，或接口名不同 | 检查 USB/PCI 适配器、驱动和接口名称。 |
+| `candump can4` 没有帧 | `candump can4` | 接线、波特率、底盘电源或急停问题 | 重新检查 CANH/CANL、500 kbit/s、电源和急停。 |
+| launch 无法打开 CAN | launch 日志、`ip link` | `can4` 未启动或名称错误 | 启动 CAN，或设置 `can_name`。 |
 | `/chassis_info_fb` 不更新 | `candump`、`ros2 topic echo` | 没有有效反馈帧，或校验失败被丢弃 | 确认原始 CAN 帧和协议版本。 |
 | `/odom` 不变化 | `/chassis_info_fb.ctrl_fb`、`/chassis_info_fb.odo_fb` | 没有里程计或速度反馈 | 确认反馈帧和车轮运动。 |
 | 缺少 TF | `tf2_echo odom base_link` | `publish_odom_tf=false` 或 `/odom` 未更新 | 启用 `publish_odom_tf` 并检查 `/odom`。 |

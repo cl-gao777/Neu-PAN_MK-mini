@@ -110,6 +110,46 @@ class WorkspaceContractTest(unittest.TestCase):
         self.assertIn("REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT", launch_file)
         self.assertIn("RuntimeError", launch_file)
 
+    def test_full_stack_can_pass_custom_neupan_config_to_neupan_launch(self):
+        launch_file = (
+            WORKSPACE_ROOT
+            / "src"
+            / "mkmini_neupan_bringup"
+            / "launch"
+            / "full_stack.launch.py"
+        ).read_text(encoding="utf-8")
+        neupan_launch_file = (
+            WORKSPACE_ROOT
+            / "src"
+            / "mkmini_neupan_bringup"
+            / "launch"
+            / "neupan.launch.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('DeclareLaunchArgument("neupan_config", default_value="")', launch_file)
+        self.assertIn('"neupan_config": neupan_config', launch_file)
+        self.assertIn('DeclareLaunchArgument("neupan_config", default_value=default_config)', neupan_launch_file)
+        self.assertIn('if not config_path:', neupan_launch_file)
+
+    def test_docker_test_runner_returns_failure_when_tests_fail(self):
+        script = (
+            MONOREPO_ROOT
+            / "docker"
+            / "scripts"
+            / "run_tests.sh"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("set -euo pipefail", script)
+        self.assertIn("colcon test --packages-select yhs_can_interfaces yhs_can_control", script)
+        self.assertIn("--return-code-on-test-failure", script)
+        self.assertIn("colcon test-result --verbose", script)
+        self.assertIn('python3 -m pytest "${test_dir}" -v', script)
+        self.assertNotIn("--return-code-on-test-failure || true", script)
+        self.assertNotIn("colcon test-result --verbose || true", script)
+        self.assertNotIn('python3 -m pytest "${test_dir}" -v ||', script)
+        self.assertNotIn("PASS=0", script)
+        self.assertNotIn("FAIL=0", script)
+
     def test_stack_check_rejects_missing_neupan_frequency_and_duplicate_control_publishers(self):
         script = (WORKSPACE_ROOT / "scripts" / "check_stack.sh").read_text(
             encoding="utf-8"

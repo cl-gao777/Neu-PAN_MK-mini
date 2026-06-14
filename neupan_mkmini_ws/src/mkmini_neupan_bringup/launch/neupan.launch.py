@@ -17,6 +17,9 @@ def _checked_neupan_node(context):
     scan_topic = LaunchConfiguration("scan_topic").perform(context)
     plan_topic = LaunchConfiguration("plan_topic").perform(context)
     output_topic = LaunchConfiguration("output_topic").perform(context)
+    if not config_path:
+        share = get_package_share_directory("mkmini_neupan_bringup")
+        config_path = os.path.join(share, "config", "neupan_mkmini.yaml")
 
     try:
         get_package_share_directory(package_name)

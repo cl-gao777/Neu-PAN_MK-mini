@@ -15,7 +15,7 @@
 - Thor 使用 Ubuntu 24.04 + ROS 2 Jazzy。
 - 项目位于 Thor 原生 Linux 路径，例如 `~/ROS2_MK-mini`。
 - 不建议使用 `/mnt/e/...` 这类 Windows 挂载路径作为正式运行工作区。
-- CAN 接口默认名为 `can0`，波特率为 `500000`。
+- 当前 Thor + PEAK PCAN-USB 部署默认 CAN 接口名为 `can4`，波特率为 `500000`；如果实际接口名不同，请按 `ip link` 结果覆盖 `can_name`。
 - 首次测试必须架空车轮或在安全测试区域进行。
 - 默认不测试倒车，保持 `allow_reverse=false`。
 
@@ -48,22 +48,22 @@ ros2 run yhs_can_control odom_distance_test_node --ros-args -p armed:=false
 ip link
 ```
 
-配置 `can0`：
+配置 `can4`：
 
 ```bash
-sudo ip link set can0 down || true
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set can0 up
-ip -details link show can0
+sudo ip link set can4 down || true
+sudo ip link set can4 type can bitrate 500000
+sudo ip link set can4 up
+ip -details link show can4
 ```
 
 检查底盘反馈：
 
 ```bash
-candump can0
+candump can4
 ```
 
-如果 `candump can0` 没有数据，先排查 CANH/CANL、波特率、急停、电源和 CAN 适配器驱动，不要急着启动 ROS 节点。
+如果 `candump can4` 没有数据，先排查 CANH/CANL、波特率、急停、电源和 CAN 适配器驱动，不要急着启动 ROS 节点。
 
 ## 启动驱动
 
@@ -175,7 +175,7 @@ CSV 日志字段：
 ## 初始验收标准
 
 - `colcon build --symlink-install` 通过。
-- `candump can0` 能看到底盘反馈。
+- `candump can4` 能看到底盘反馈。
 - `ros2 launch yhs_can_control yhs_can_control.launch.py` 能启动。
 - `/chassis_info_fb`、`/odom` 和 `odom -> base_link` TF 正常更新。
 - `odom_distance_test_node` 能在到达目标距离、超时或异常时自动停车。

@@ -57,22 +57,26 @@ source install/setup.bash
 
 ## 4. 配置 CAN
 
-确认 CANH 和 CANL 连接正确后，以 500 kbit/s 启动 `can0`：
+确认 CANH 和 CANL 连接正确后，以 500 kbit/s 启动当前 Thor 默认接口 `can4`。
+如果 `ip link` 显示的实际接口名不同，请按实际名称执行，并同步覆盖
+`can_name` 参数：
 
 ```bash
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set can0 up
-ip -details link show can0
+sudo ip link set can4 down || true
+sudo ip link set can4 type can bitrate 500000
+sudo ip link set can4 up
+ip -details link show can4
 ```
 
 检查底盘是否正在发送 CAN 帧：
 
 ```bash
-candump can0
+candump can4
 ```
 
-如果 `can0` 不存在，请检查 CAN 适配器驱动、USB/PCI 设备状态，以及接口名称
-是否不是 `can0`。
+如果 `can4` 不存在，请检查 CAN 适配器驱动、USB/PCI 设备状态，以及接口名称
+是否不是 `can4`。接口名不同时，修改 `src/yhs_can_control/params/cfg.yaml`
+中的 `can_name`，或通过自定义参数文件覆盖。
 
 ## 5. 启动 SDK
 

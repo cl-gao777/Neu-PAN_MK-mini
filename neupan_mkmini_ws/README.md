@@ -18,7 +18,7 @@
   （`D=4`、`R=2`）。
 - 提供可独立启动的在线 SLAM、Nav2 与底盘控制 launch 文件。
 - 提供 MK-mini 几何、点云切片、SLAM Toolbox 与 Nav2 配置。
-- 提供三周执行、安全、标定和验收手册。
+- 提供安全、标定、接口约定和验收手册。
 
 ## 关键安全规则
 
@@ -90,6 +90,14 @@ ros2 launch mkmini_neupan_bringup full_stack.launch.py start_mid360:=true
 ros2 launch mkmini_neupan_bringup full_stack.launch.py start_neupan:=true
 ```
 
+如需使用现场专用 NeuPAN 配置，可在全栈 launch 中显式传入：
+
+```bash
+ros2 launch mkmini_neupan_bringup full_stack.launch.py \
+  start_neupan:=true \
+  neupan_config:=/absolute/path/to/neupan_mkmini.yaml
+```
+
 如果 `config/neupan_mkmini.yaml` 仍包含
 `REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT`，NeuPAN launch 会立即失败。请先按
 MK-mini 几何参数训练 DUNE：`wheelbase=0.6`、`length=0.84-0.90`、`width=0.60`，
@@ -110,5 +118,6 @@ ros2 launch mkmini_neupan_bridge mkmini_neupan_control.launch.py \
 
 该配置禁止用于落地导航测试。
 
-开始真机工作前，请阅读 [18 日执行手册](docs/18-day-execution.md)。
+开始真机工作前，请阅读 [真机安全检查表](docs/safety-checklist.md) 和
+[验收测试](docs/acceptance-test.md)。
 上游项目及其用途见 [项目与论文索引](docs/research-index.md)。

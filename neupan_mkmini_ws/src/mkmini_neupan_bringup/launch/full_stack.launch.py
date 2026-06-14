@@ -9,7 +9,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
-def _include(package_name, launch_file, condition=None):
+def _include(package_name, launch_file, condition=None, launch_arguments=None):
     share = get_package_share_directory(package_name)
     arguments = {
         "launch_description_source": PythonLaunchDescriptionSource(
@@ -18,17 +18,21 @@ def _include(package_name, launch_file, condition=None):
     }
     if condition is not None:
         arguments["condition"] = condition
+    if launch_arguments is not None:
+        arguments["launch_arguments"] = launch_arguments.items()
     return IncludeLaunchDescription(**arguments)
 
 
 def generate_launch_description():
     start_mid360 = LaunchConfiguration("start_mid360")
     start_neupan = LaunchConfiguration("start_neupan")
+    neupan_config = LaunchConfiguration("neupan_config")
 
     return LaunchDescription(
         [
             DeclareLaunchArgument("start_mid360", default_value="false"),
             DeclareLaunchArgument("start_neupan", default_value="false"),
+            DeclareLaunchArgument("neupan_config", default_value=""),
             _include(
                 "mkmini_neupan_bringup",
                 "mid360_driver.launch.py",
@@ -53,6 +57,7 @@ def generate_launch_description():
                 "mkmini_neupan_bringup",
                 "neupan.launch.py",
                 condition=IfCondition(start_neupan),
+                launch_arguments={"neupan_config": neupan_config},
             ),
             _include("mkmini_neupan_bridge", "mkmini_neupan_control.launch.py"),
         ]

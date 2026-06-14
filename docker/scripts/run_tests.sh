@@ -40,9 +40,6 @@ fi
 
 safe_source "${ROS_SETUP}"
 
-PASS=0
-FAIL=0
-
 # ---- Chassis C++ tests (colcon test) ----
 run_chassis_tests() {
     echo "=== Chassis SDK Tests (colcon test) ==="
@@ -52,10 +49,10 @@ run_chassis_tests() {
     fi
     cd "${CHASSIS_WS}"
     colcon test --packages-select yhs_can_interfaces yhs_can_control \
-        --return-code-on-test-failure || true
+        --return-code-on-test-failure
     echo ""
     echo "Test results:"
-    colcon test-result --verbose || true
+    colcon test-result --verbose
 }
 
 # ---- NeuPAN bridge Python tests (pytest) ----
@@ -68,7 +65,7 @@ run_bridge_tests() {
     for test_dir in "${test_dirs[@]}"; do
         if [[ -d "${test_dir}" ]]; then
             echo "  Running: ${test_dir}"
-            python3 -m pytest "${test_dir}" -v || PASS=$((PASS + 0))
+            python3 -m pytest "${test_dir}" -v
         fi
     done
 }

@@ -9,7 +9,7 @@
 最低目标不是直接接入 Nav2 自动导航，而是确认 Thor 能稳定跑起当前底盘中间件：
 
 - Thor 能在 ROS 2 Jazzy 下完成 `colcon build --symlink-install`。
-- Thor 能通过 `can0` 收到底盘 CAN 反馈。
+- Thor 能通过当前默认接口 `can4` 收到底盘 CAN 反馈。
 - `yhs_can_control_node` 和 `cmd_vel_to_ctrl_cmd_node` 能正常启动。
 - `/chassis_info_fb`、`/odom` 和 `odom -> base_link` TF 能更新。
 - 架空车轮状态下，低速 `/cmd_vel` 能触发底盘响应。
@@ -93,31 +93,33 @@ source install/setup.bash
 ip link
 ```
 
-如果接口名是 `can0`，执行：
+当前 Thor + PEAK PCAN-USB 部署默认接口名是 `can4`。如果 `ip link` 显示的
+实际接口名不同，请把下面命令中的 `can4` 替换为实际接口名，并同步覆盖
+`can_name` 参数。
 
 ```bash
-sudo ip link set can0 down || true
-sudo ip link set can0 type can bitrate 500000
-sudo ip link set can0 up
-ip -details link show can0
+sudo ip link set can4 down || true
+sudo ip link set can4 type can bitrate 500000
+sudo ip link set can4 up
+ip -details link show can4
 ```
 
 检查底盘是否有 CAN 反馈：
 
 ```bash
-candump can0
+candump can4
 ```
 
-如果 `candump can0` 没有任何数据，不要急着启动 ROS 节点。优先排查：
+如果 `candump can4` 没有任何数据，不要急着启动 ROS 节点。优先排查：
 
 - CANH/CANL 是否接反。
 - 波特率是否为 `500000`。
 - MK-mini 是否上电。
 - 急停是否释放。
 - CAN 适配器驱动是否正常。
-- 接口名是否不是 `can0`。
+- 接口名是否不是 `can4`，以及 `can_name` 是否同步覆盖。
 
-只有 `candump can0` 能看到底盘反馈后，再继续启动 ROS 2 驱动。
+只有 `candump can4` 能看到底盘反馈后，再继续启动 ROS 2 驱动。
 
 ## 6. 启动 MK-mini 驱动
 
@@ -136,7 +138,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
   `/odom` 和 TF。
 - `cmd_vel_to_ctrl_cmd_node`：将 `/cmd_vel` 转成 `/ctrl_cmd`。
 
-若启动时报 `can0` 相关错误，回到 CAN 通讯验证步骤。
+若启动时报 `can4` 或实际 `can_name` 相关错误，回到 CAN 通讯验证步骤。
 
 ## 7. 话题与 TF 检查
 
@@ -213,7 +215,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 满足以下条件后，才能认为“Thor 已经能跑起当前 MK-mini SDK”：
 
 - [ ] `colcon build --symlink-install` 通过。
-- [ ] `candump can0` 能看到底盘反馈。
+- [ ] `candump can4` 能看到底盘反馈。
 - [ ] `ros2 launch yhs_can_control yhs_can_control.launch.py` 能启动。
 - [ ] `/chassis_info_fb` 有连续数据。
 - [ ] `/odom` 能更新。
@@ -229,10 +231,10 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 | 现象 | 优先检查 | 处理方向 |
 | --- | --- | --- |
 | `colcon build` 失败 | ROS 环境、依赖、工作区结构 | 确认 Jazzy 已 source，执行 `rosdep install`。 |
-| 没有 `can0` | `ip link` | 检查 CAN 适配器驱动和接口名称。 |
-| `candump can0` 没有帧 | CANH/CANL、波特率、电源、急停 | 先修复 CAN 通讯，不要启动 ROS 节点。 |
-| launch 打不开 CAN | `ip -details link show can0` | 确认 `can0` 已 `UP`，或修改 `can_name` 参数。 |
-| `/chassis_info_fb` 不更新 | `candump can0` | 确认原始 CAN 帧存在，且协议版本匹配。 |
+| 没有 `can4` | `ip link` | 检查 CAN 适配器驱动和接口名称；接口名不同时覆盖 `can_name`。 |
+| `candump can4` 没有帧 | CANH/CANL、波特率、电源、急停 | 先修复 CAN 通讯，不要启动 ROS 节点。 |
+| launch 打不开 CAN | `ip -details link show can4` | 确认 `can4` 已 `UP`，或修改 `can_name` 参数。 |
+| `/chassis_info_fb` 不更新 | `candump can4` | 确认原始 CAN 帧存在，且协议版本匹配。 |
 | `/odom` 不更新 | `/chassis_info_fb.ctrl_fb`、`/chassis_info_fb.odo_fb` | 确认底盘速度或里程计反馈存在。 |
 | TF 查不到 | `publish_odom_tf`、`/odom` | 确认 `publish_odom_tf=true`，且 `/odom` 正常更新。 |
 | 倒车无响应 | `allow_reverse` | 默认禁止倒车，只有安全验证后才可启用。 |

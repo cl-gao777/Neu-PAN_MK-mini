@@ -52,7 +52,12 @@ sudo ip addr add 192.168.1.50/24 dev eth0
 ```bash
 # 方式 A：在 Thor 上 git clone（推荐）
 ssh <your_user>@<thor_ip>
-git clone <your-repo-url> ~/workspaces/MK-mini_ws
+git clone https://github.com/cl-gao777/Neu-PAN_MK-mini.git ~/workspaces/MK-mini_ws
+
+# 如果 Thor 上已经有这个仓库，更新到 GitHub 上的最新受控版本
+cd ~/workspaces/MK-mini_ws
+git fetch origin
+git pull --ff-only origin main
 
 # 方式 B：从 Windows SCP 传
 scp -r E:\Codex_ws\MK-mini_ws <your_user>@<thor_ip>:~/workspaces/
@@ -263,7 +268,7 @@ bash docker/scripts/build_neupan_full.sh
 ```bash
 source /opt/ros/jazzy/setup.bash
 source /workspaces/MK-mini_ws/neupan_mkmini_ws/install/setup.bash
-ros2 launch mkmini_neunan_bringup full_stack.launch.py
+ros2 launch mkmini_neupan_bringup full_stack.launch.py
 ```
 
 **验收测试录制（参照 acceptance-test.md）：**

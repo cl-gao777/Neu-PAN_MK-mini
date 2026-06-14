@@ -7,7 +7,7 @@
 
 - 来源文档：原始桌面包中的厂家 MK-mini ROS 2 Word 使用说明。
 - 厂家参考环境：Ubuntu 22.04、ROS 2 Humble、x86_64、PCAN。
-- 当前 SDK 目标环境：Ubuntu 24.04、ROS 2 Jazzy、兼容 SocketCAN 的 `can0`。
+- 当前 SDK 目标环境：Ubuntu 24.04、ROS 2 Jazzy、兼容 SocketCAN 的 `can4` 默认接口。
 
 如果本文档与当前代码或 DBC 协议文件存在冲突，以当前代码和 DBC 为准。
 
@@ -27,7 +27,9 @@ sudo apt-get install can-utils
 candump can0
 ```
 
-当 CAN 适配器显示为 `can0` 时，这些命令仍适用于 Thor/Jazzy 配置。
+厂家示例保留了 `can0`，但当前 Thor + PEAK PCAN-USB 部署默认使用 `can4`。
+现场应先用 `ip link` 确认接口名；如果不是 `can4`，请按实际接口名执行 CAN
+命令并同步覆盖 `can_name`。
 
 ## 厂家 ROS 2 包结构
 
