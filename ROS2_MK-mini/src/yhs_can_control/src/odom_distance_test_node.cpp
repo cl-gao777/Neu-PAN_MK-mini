@@ -64,7 +64,7 @@ public:
   {
     config_.armed = declare_and_get<bool>(*this, "armed", false);
     config_.target_distance_m = declare_and_get<double>(*this, "target_distance_m", 1.0);
-    config_.target_speed_mps = declare_and_get<double>(*this, "target_speed_mps", 0.05);
+    config_.target_speed_mps = declare_and_get<double>(*this, "target_speed_mps", 0.3);
     cmd_vel_topic_ = declare_and_get<std::string>(*this, "cmd_vel_topic", "cmd_vel");
     odom_topic_ = declare_and_get<std::string>(*this, "odom_topic", "odom");
     chassis_info_topic_ =

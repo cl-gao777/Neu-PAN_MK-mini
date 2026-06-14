@@ -30,12 +30,13 @@
 #include "yhs_can_interfaces/msg/chassis_info_fb.hpp"
 #include "yhs_can_interfaces/msg/ctrl_cmd.hpp"
 #include "yhs_can_interfaces/msg/io_cmd.hpp"
+#include "yhs_can_interfaces/msg/veh_diag_fb.hpp"
 
 namespace yhs
 {
 
 // 底盘驱动核心类：
-// 订阅 ROS 控制指令并写入 CAN，同时接收底盘反馈并发布 /chassis_info_fb、/odom 和 TF。
+// 订阅 ROS 控制指令并写入 CAN，同时接收底盘反馈并发布 /chassis_info_fb、/veh_diag_fb、/odom 和 TF。
 class CanControl
 {
 public:
@@ -82,6 +83,7 @@ private:
   rclcpp::Subscription<yhs_can_interfaces::msg::CtrlCmd>::SharedPtr ctrl_cmd_subscriber_;
 
   rclcpp::Publisher<yhs_can_interfaces::msg::ChassisInfoFb>::SharedPtr chassis_info_fb_publisher_;
+  rclcpp::Publisher<yhs_can_interfaces::msg::VehDiagFb>::SharedPtr veh_diag_fb_publisher_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 

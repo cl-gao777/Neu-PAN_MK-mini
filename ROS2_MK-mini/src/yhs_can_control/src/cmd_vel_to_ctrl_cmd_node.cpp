@@ -45,11 +45,11 @@ public:
     wheel_base_ = declare_and_get<double>(*this, "wheel_base", 0.6);
     publish_rate_hz_ = declare_and_get<double>(*this, "ctrl_cmd_publish_rate_hz", 50.0);
     timeout_sec_ = declare_and_get<double>(*this, "cmd_vel_timeout_sec", 0.3);
-    max_velocity_mps_ = declare_and_get<double>(*this, "max_velocity_mps", 0.3);
+    max_velocity_mps_ = declare_and_get<double>(*this, "max_velocity_mps", 0.8);
     max_steering_deg_ = declare_and_get<double>(*this, "max_steering_deg", 25.0);
     allow_reverse_ = declare_and_get<bool>(*this, "allow_reverse", false);
     use_stamped_cmd_vel_ = declare_and_get<bool>(*this, "use_stamped_cmd_vel", false);
-    forward_gear_ = static_cast<std::uint8_t>(declare_and_get<int>(*this, "forward_gear", 1));
+    forward_gear_ = static_cast<std::uint8_t>(declare_and_get<int>(*this, "forward_gear", 4));
     reverse_gear_ = static_cast<std::uint8_t>(declare_and_get<int>(*this, "reverse_gear", 2));
 
     if (wheel_base_ <= 0.0) {
@@ -155,11 +155,11 @@ private:
   double wheel_base_{0.6};
   double publish_rate_hz_{50.0};
   double timeout_sec_{0.3};
-  double max_velocity_mps_{0.3};
+  double max_velocity_mps_{0.8};
   double max_steering_deg_{25.0};
   bool allow_reverse_{false};
   bool use_stamped_cmd_vel_{false};
-  std::uint8_t forward_gear_{1};
+  std::uint8_t forward_gear_{4};
   std::uint8_t reverse_gear_{2};
 
   std::mutex command_mutex_;

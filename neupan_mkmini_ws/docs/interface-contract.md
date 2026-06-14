@@ -22,11 +22,15 @@
 | `/plan` | `nav_msgs/Path` | Nav2 planner | NeuPAN |
 | `/neupan_cmd_vel` | `geometry_msgs/Twist` | 上游 NeuPAN ROS2 | 仅兼容适配器 |
 | `/neupan/ackermann_cmd` | `ackermann_msgs/AckermannDriveStamped` | 适配器或修改后的 NeuPAN | 安全桥 |
+| `/veh_diag_fb` | `yhs_can_interfaces/VehDiagFb` | YHS CAN 驱动 | 安全桥 |
 | `/ctrl_cmd` | `yhs_can_interfaces/CtrlCmd` | 安全桥 | YHS CAN 驱动 |
 
 上游 ROS2 wrapper 使用 `Twist.angular.z` 表示阿克曼转向角（弧度），而不是偏航角速度。
 兼容适配器会立即将其转换为 `AckermannDriveStamped`；其他节点不得将该话题当作普通
 `cmd_vel` 使用。
+
+安全桥使用 `/veh_diag_fb` 判断整车诊断帧是否健康且新鲜。`/chassis_info_fb` 仍是聚合底盘反馈，
+但任意反馈帧都会刷新该聚合消息，不能作为诊断帧新鲜度来源。
 
 ## 控制单位
 

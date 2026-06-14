@@ -29,9 +29,12 @@
 
 使用 `config/neupan_mkmini.yaml` 作为几何和训练基线。启动 NeuPAN 前，必须替换
 `REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT`。
+这里的 `0.3 m/s` 是 NeuPAN 安全桥限速；底盘 SDK 自带 `/cmd_vel` 适配器默认上限为
+`0.8 m/s`，NeuPAN 控制期间不能绕过安全桥直接使用该适配器。
 
 当前仓库不会假设已经有 MK-mini 专用 DUNE checkpoint。未完成训练前，只能验证
-`/neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd` 的桥接和安全逻辑，不能进行
+`/neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd` 的桥接和安全逻辑，以及
+`/veh_diag_fb` 诊断新鲜度门控，不能进行
 NeuPAN 实车闭环复现。训练参数以 MK-mini 实车几何为准：`wheelbase=0.6`、
 `length=0.84-0.90`、`width=0.60`。
 

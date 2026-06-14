@@ -11,7 +11,7 @@
 - Thor 能在 ROS 2 Jazzy 下完成 `colcon build --symlink-install`。
 - Thor 能通过当前默认接口 `can4` 收到底盘 CAN 反馈。
 - `yhs_can_control_node` 和 `cmd_vel_to_ctrl_cmd_node` 能正常启动。
-- `/chassis_info_fb`、`/odom` 和 `odom -> base_link` TF 能更新。
+- `/chassis_info_fb`、`/veh_diag_fb`、`/odom` 和 `odom -> base_link` TF 能更新。
 - 架空车轮状态下，低速 `/cmd_vel` 能触发底盘响应。
 - 停止发布 `/cmd_vel` 后，约 `0.3s` 自动回到 0 速。
 
@@ -28,7 +28,7 @@
 
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
-| `max_velocity_mps` | `0.3` | `/cmd_vel` 速度限幅，单位 m/s。 |
+| `max_velocity_mps` | `0.8` | 底盘 SDK `/cmd_vel` 适配器速度限幅，单位 m/s。 |
 | `max_steering_deg` | `25.0` | 最大转向角，单位度。 |
 | `allow_reverse` | `false` | 默认禁止倒车。 |
 | `cmd_vel_timeout_sec` | `0.3` | 超时停车时间，单位秒。 |
@@ -134,8 +134,8 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 该 launch 会启动：
 
-- `yhs_can_control_node`：SocketCAN 桥接、底盘反馈解析、`/chassis_info_fb`、
-  `/odom` 和 TF。
+- `yhs_can_control_node`：SocketCAN 扩展帧桥接、底盘反馈解析、`/chassis_info_fb`、
+  `/veh_diag_fb`、`/odom` 和 TF。
 - `cmd_vel_to_ctrl_cmd_node`：将 `/cmd_vel` 转成 `/ctrl_cmd`。
 
 若启动时报 `can4` 或实际 `can_name` 相关错误，回到 CAN 通讯验证步骤。
@@ -156,6 +156,7 @@ ros2 topic list
 - `/io_cmd`
 - `/cmd_vel`
 - `/chassis_info_fb`
+- `/veh_diag_fb`
 - `/odom`
 - `/tf`
 
@@ -163,6 +164,7 @@ ros2 topic list
 
 ```bash
 ros2 topic echo /chassis_info_fb
+ros2 topic echo /veh_diag_fb
 ```
 
 检查里程计：
@@ -179,7 +181,8 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 预期结果：
 
-- `/chassis_info_fb` 能持续输出底盘反馈。
+- `/chassis_info_fb` 能持续输出聚合底盘反馈。
+- `/veh_diag_fb` 只在真实整车诊断 CAN 帧到达时更新。
 - `/odom` 在有底盘里程计或速度反馈时更新。
 - `odom -> base_link` TF 能查询到。
 
@@ -191,14 +194,14 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.05}, angular: {z: 0.0}}"
+"{linear: {x: 0.3}, angular: {z: 0.0}}"
 ```
 
 转向测试：
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.05}, angular: {z: 0.1}}"
+"{linear: {x: 0.3}, angular: {z: 0.1}}"
 ```
 
 停止测试：
@@ -218,6 +221,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 - [ ] `candump can4` 能看到底盘反馈。
 - [ ] `ros2 launch yhs_can_control yhs_can_control.launch.py` 能启动。
 - [ ] `/chassis_info_fb` 有连续数据。
+- [ ] `/veh_diag_fb` 有连续诊断数据。
 - [ ] `/odom` 能更新。
 - [ ] `ros2 run tf2_ros tf2_echo odom base_link` 能查到 TF。
 - [ ] 架空车轮状态下，`/cmd_vel` 低速前进指令能触发底盘响应。
@@ -235,6 +239,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 | `candump can4` 没有帧 | CANH/CANL、波特率、电源、急停 | 先修复 CAN 通讯，不要启动 ROS 节点。 |
 | launch 打不开 CAN | `ip -details link show can4` | 确认 `can4` 已 `UP`，或修改 `can_name` 参数。 |
 | `/chassis_info_fb` 不更新 | `candump can4` | 确认原始 CAN 帧存在，且协议版本匹配。 |
+| `/veh_diag_fb` 不更新 | `candump can4`、诊断 CAN ID | 确认整车诊断扩展帧存在；安全桥诊断超时依赖该话题。 |
 | `/odom` 不更新 | `/chassis_info_fb.ctrl_fb`、`/chassis_info_fb.odo_fb` | 确认底盘速度或里程计反馈存在。 |
 | TF 查不到 | `publish_odom_tf`、`/odom` | 确认 `publish_odom_tf=true`，且 `/odom` 正常更新。 |
 | 倒车无响应 | `allow_reverse` | 默认禁止倒车，只有安全验证后才可启用。 |

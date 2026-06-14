@@ -83,13 +83,15 @@ source /opt/ros/jazzy/setup.bash
 source ~/ROS2_MK-mini/install/setup.bash
 ros2 topic list
 ros2 topic echo /chassis_info_fb
+ros2 topic echo /veh_diag_fb
 ros2 topic echo /odom
 ros2 run tf2_ros tf2_echo odom base_link
 ```
 
 最低要求：
 
-- `/chassis_info_fb` 有连续数据。
+- `/chassis_info_fb` 有连续聚合反馈数据。
+- `/veh_diag_fb` 有连续诊断反馈数据。
 - `/odom` 在车轮运动时连续更新。
 - `odom -> base_link` TF 能查询到。
 
@@ -101,7 +103,7 @@ ros2 run tf2_ros tf2_echo odom base_link
 ros2 run yhs_can_control odom_distance_test_node --ros-args \
   -p armed:=true \
   -p target_distance_m:=0.5 \
-  -p target_speed_mps:=0.05
+  -p target_speed_mps:=0.3
 ```
 
 预期现象：
@@ -119,11 +121,11 @@ ros2 run yhs_can_control odom_distance_test_node --ros-args \
 
 | 轮次 | 目标距离 | 目标速度 | 重复次数 |
 | --- | --- | --- | --- |
-| 1 | `0.5 m` | `0.05 m/s` | 3 |
-| 2 | `1.0 m` | `0.05 m/s` | 3 |
-| 3 | `2.0 m` | `0.05 m/s` | 3 |
-| 4 | `1.0 m` | `0.1 m/s` | 3 |
-| 5 | `2.0 m` | `0.1 m/s` | 3 |
+| 1 | `0.5 m` | `0.3 m/s` | 3 |
+| 2 | `1.0 m` | `0.3 m/s` | 3 |
+| 3 | `2.0 m` | `0.3 m/s` | 3 |
+| 4 | `1.0 m` | `0.5 m/s` | 3 |
+| 5 | `2.0 m` | `0.5 m/s` | 3 |
 
 示例命令：
 
@@ -131,7 +133,7 @@ ros2 run yhs_can_control odom_distance_test_node --ros-args \
 ros2 run yhs_can_control odom_distance_test_node --ros-args \
   -p armed:=true \
   -p target_distance_m:=1.0 \
-  -p target_speed_mps:=0.05 \
+  -p target_speed_mps:=0.3 \
   -p log_csv_path:=/tmp/mkmini_odom_test.csv
 ```
 
@@ -170,14 +172,14 @@ CSV 日志字段：
 
 | 日期 | 目标距离 | 目标速度 | `/odom` 距离 | 底盘累计里程增量 | 实测距离 | 误差率 | 横向偏移 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| | `1.0 m` | `0.05 m/s` | | | | | | |
+| | `1.0 m` | `0.3 m/s` | | | | | | |
 
 ## 初始验收标准
 
 - `colcon build --symlink-install` 通过。
 - `candump can4` 能看到底盘反馈。
 - `ros2 launch yhs_can_control yhs_can_control.launch.py` 能启动。
-- `/chassis_info_fb`、`/odom` 和 `odom -> base_link` TF 正常更新。
+- `/chassis_info_fb`、`/veh_diag_fb`、`/odom` 和 `odom -> base_link` TF 正常更新。
 - `odom_distance_test_node` 能在到达目标距离、超时或异常时自动停车。
 - 直线 `1.0 m` 和 `2.0 m` 的平均距离误差建议先控制在 5% 以内。
 - `2.0 m` 直线测试的车头偏航建议先控制在 5 度以内。

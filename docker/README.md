@@ -138,16 +138,18 @@ source /workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash
 
 ros2 topic list
 ros2 topic echo /chassis_info_fb
+ros2 topic echo /veh_diag_fb
 ros2 topic echo /odom
 ros2 topic hz /chassis_info_fb
+ros2 topic hz /veh_diag_fb
 ros2 run tf2_ros tf2_echo odom base_link
 ```
 
 **发指令测试运动：**
 
 ```bash
-bash docker/scripts/send_cmd_vel.sh forward       # 前进 0.05 m/s
-bash docker/scripts/send_cmd_vel.sh forward 0.1    # 前进 0.1 m/s
+bash docker/scripts/send_cmd_vel.sh forward       # 前进 0.3 m/s
+bash docker/scripts/send_cmd_vel.sh forward 0.5    # 前进 0.5 m/s
 bash docker/scripts/send_cmd_vel.sh turn           # 轻微转向
 bash docker/scripts/send_cmd_vel.sh stop           # 停车
 ```
@@ -164,10 +166,10 @@ bash docker/scripts/send_cmd_vel.sh stop           # 停车
 
 ```bash
 # 1.0 m 低速测试
-bash docker/scripts/run_odom_test.sh --distance 1.0 --speed 0.05
+bash docker/scripts/run_odom_test.sh --distance 1.0 --speed 0.3
 
 # 2.0 m 测试，输出到挂载目录
-bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.05 \
+bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.3 \
     --csv /workspaces/MK-mini_ws/odom_results.csv
 ```
 
@@ -175,11 +177,11 @@ bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.05 \
 
 | 轮次 | 目标距离 | 速度 | 重复 | 命令 |
 |---|---|---|---|---|
-| 1 | 0.5 m | 0.05 m/s | 3 | `--distance 0.5 --speed 0.05` |
-| 2 | 1.0 m | 0.05 m/s | 3 | `--distance 1.0 --speed 0.05` |
-| 3 | 2.0 m | 0.05 m/s | 3 | `--distance 2.0 --speed 0.05` |
-| 4 | 1.0 m | 0.1 m/s | 3 | `--distance 1.0 --speed 0.1` |
-| 5 | 2.0 m | 0.1 m/s | 3 | `--distance 2.0 --speed 0.1` |
+| 1 | 0.5 m | 0.3 m/s | 3 | `--distance 0.5 --speed 0.3` |
+| 2 | 1.0 m | 0.3 m/s | 3 | `--distance 1.0 --speed 0.3` |
+| 3 | 2.0 m | 0.3 m/s | 3 | `--distance 2.0 --speed 0.3` |
+| 4 | 1.0 m | 0.5 m/s | 3 | `--distance 1.0 --speed 0.5` |
+| 5 | 2.0 m | 0.5 m/s | 3 | `--distance 2.0 --speed 0.5` |
 
 **误差计算：**
 
@@ -209,11 +211,11 @@ source /workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash
 ros2 launch yhs_can_control yhs_can_control.launch.py
 
 # 验证话题
-ros2 topic list | grep -E 'ctrl_cmd|chassis_info_fb|odom|cmd_vel'
+ros2 topic list | grep -E 'ctrl_cmd|chassis_info_fb|veh_diag_fb|odom|cmd_vel'
 ros2 run tf2_ros tf2_echo odom base_link
 
 # 架空轮测试
-bash docker/scripts/run_odom_test.sh --distance 0.5 --speed 0.05
+bash docker/scripts/run_odom_test.sh --distance 0.5 --speed 0.3
 ```
 
 ---

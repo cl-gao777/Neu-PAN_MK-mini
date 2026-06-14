@@ -25,7 +25,7 @@ cmd_vel_to_ctrl_cmd_node:
     ctrl_cmd_publish_rate_hz: 50.0
     # 超过该时间没有新 /cmd_vel 时自动发布 0 速。
     cmd_vel_timeout_sec: 0.3
-    max_velocity_mps: 2.0
+    max_velocity_mps: 0.8
     max_steering_deg: 25.0
     # 默认禁止倒车，实车确认安全后才建议改为 true。
     allow_reverse: false

@@ -24,7 +24,7 @@ struct Config
   // armed 是安全开关；默认 false，防止误启动时车辆运动。
   bool armed{false};
   double target_distance_m{1.0};
-  double target_speed_mps{0.05};
+  double target_speed_mps{0.3};
   double max_runtime_sec{60.0};
   double distance_tolerance_m{0.01};
 };

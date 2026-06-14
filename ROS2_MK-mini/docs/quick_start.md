@@ -91,7 +91,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 该 launch 文件会启动：
 
-- `yhs_can_control_node`：SocketCAN 桥接、反馈解析、`/odom` 和 TF。
+- `yhs_can_control_node`：SocketCAN 扩展帧桥接、聚合反馈、诊断反馈、`/odom` 和 TF。
 - `cmd_vel_to_ctrl_cmd_node`：`/cmd_vel` 到 `/ctrl_cmd` 的适配器。
 
 如需使用自定义参数文件：
@@ -109,8 +109,10 @@ source /opt/ros/jazzy/setup.bash
 source ~/ROS2_MK-mini/install/setup.bash
 ros2 topic list
 ros2 topic echo /chassis_info_fb
+ros2 topic echo /veh_diag_fb
 ros2 topic echo /odom
 ros2 topic hz /chassis_info_fb
+ros2 topic hz /veh_diag_fb
 ```
 
 如果 `publish_odom_tf` 为 true：
@@ -121,21 +123,22 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ## 7. 低速指令测试
 
-首次运动测试时，请架空驱动轮或使用受控测试区域。默认适配器将速度限制为
-`0.3 m/s`，转角限制为 `25 deg`，并禁用倒车。
+首次运动测试时，请架空驱动轮或使用受控测试区域。底盘 SDK 默认 `/cmd_vel`
+适配器将速度限制为 `0.8 m/s`，转角限制为 `25 deg`，并禁用倒车；现场测试确认
+MK-mini 最低可响应控制速度为 `0.3 m/s`，因此首次检查也使用 `0.3 m/s`。
 
 发布一次短暂的前进指令：
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.05}, angular: {z: 0.0}}"
+"{linear: {x: 0.3}, angular: {z: 0.0}}"
 ```
 
 发布一次轻微转向指令：
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.05}, angular: {z: 0.1}}"
+"{linear: {x: 0.3}, angular: {z: 0.1}}"
 ```
 
 如果超过 `cmd_vel_timeout_sec` 没有新指令，适配器应持续发布零速度

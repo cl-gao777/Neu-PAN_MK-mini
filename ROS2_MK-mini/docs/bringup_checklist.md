@@ -82,6 +82,7 @@ ros2 topic list
 - [ ] `/io_cmd`
 - [ ] `/cmd_vel`
 - [ ] `/chassis_info_fb`
+- [ ] `/veh_diag_fb`
 - [ ] `/odom`
 - [ ] `/tf`
 
@@ -89,13 +90,16 @@ ros2 topic list
 
 ```bash
 ros2 topic echo /chassis_info_fb
+ros2 topic echo /veh_diag_fb
 ros2 topic hz /chassis_info_fb
+ros2 topic hz /veh_diag_fb
 ```
 
 预期结果：
 
 - [ ] 存在 CAN 反馈时，反馈消息会持续更新。
 - [ ] 当对应 CAN 帧存在时，`ctrl_fb`、车轮反馈、BMS、诊断和超声波字段有数据。
+- [ ] `/veh_diag_fb` 只随整车诊断扩展帧更新，可用于判断诊断帧新鲜度。
 
 检查里程计：
 
@@ -127,7 +131,7 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.05}, angular: {z: 0.0}}"
+"{linear: {x: 0.3}, angular: {z: 0.0}}"
 ```
 
 预期结果：
@@ -141,7 +145,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.05}, angular: {z: 0.1}}"
+"{linear: {x: 0.3}, angular: {z: 0.1}}"
 ```
 
 预期结果：
@@ -163,7 +167,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: -0.05}, angular: {z: 0.0}}"
+"{linear: {x: -0.3}, angular: {z: 0.0}}"
 ```
 
 预期结果：
@@ -176,7 +180,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 只有架空车轮检查通过后，才继续地面测试。
 
 - [ ] 使用空旷、平整的测试区域。
-- [ ] 速度保持在默认 `0.3 m/s` 或以下。
+- [ ] 初始地面测试速度使用实测可响应下限 `0.3 m/s`；底盘 SDK `/cmd_vel` 适配器硬限幅为 `0.8 m/s`。
 - [ ] 保持有人靠近急停按钮。
 - [ ] 先发送短时 `/cmd_vel` 指令，不要直接进行连续导航。
 - [ ] 确认 `/odom` 方向与实际运动一致。
@@ -200,6 +204,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 | `candump can4` 没有帧 | `candump can4` | 接线、波特率、底盘电源或急停问题 | 重新检查 CANH/CANL、500 kbit/s、电源和急停。 |
 | launch 无法打开 CAN | launch 日志、`ip link` | `can4` 未启动或名称错误 | 启动 CAN，或设置 `can_name`。 |
 | `/chassis_info_fb` 不更新 | `candump`、`ros2 topic echo` | 没有有效反馈帧，或校验失败被丢弃 | 确认原始 CAN 帧和协议版本。 |
+| `/veh_diag_fb` 不更新 | `candump`、`ros2 topic hz /veh_diag_fb` | 整车诊断扩展帧缺失或未匹配 | 确认诊断 CAN ID 和扩展帧解析。 |
 | `/odom` 不变化 | `/chassis_info_fb.ctrl_fb`、`/chassis_info_fb.odo_fb` | 没有里程计或速度反馈 | 确认反馈帧和车轮运动。 |
 | 缺少 TF | `tf2_echo odom base_link` | `publish_odom_tf=false` 或 `/odom` 未更新 | 启用 `publish_odom_tf` 并检查 `/odom`。 |
 | 车辆不倒车 | 适配器日志、参数 | `allow_reverse=false` | 仅在安全测试后启用。 |

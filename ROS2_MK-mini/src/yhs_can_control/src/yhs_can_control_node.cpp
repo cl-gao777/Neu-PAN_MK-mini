@@ -4,10 +4,12 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "yhs_can_control/socketcan_helpers.hpp"
+
 // 这个文件实现 MK-mini 底盘 ROS 2 节点：
 // 1. 打开 Linux SocketCAN；
 // 2. 把 /ctrl_cmd、/io_cmd 编码成 CAN 指令；
-// 3. 把底盘反馈解析后发布到 /chassis_info_fb、/odom 和 TF。
+// 3. 把底盘反馈解析后发布到 /chassis_info_fb、/veh_diag_fb、/odom 和 TF。
 
 namespace yhs
 {
@@ -63,6 +65,8 @@ CanControl::CanControl(rclcpp::Node::SharedPtr node)
 
   chassis_info_fb_publisher_ =
     node_->create_publisher<yhs_can_interfaces::msg::ChassisInfoFb>("chassis_info_fb", 10);
+  veh_diag_fb_publisher_ =
+    node_->create_publisher<yhs_can_interfaces::msg::VehDiagFb>("veh_diag_fb", 10);
   odom_pub_ = node_->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
   tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(node_);
 }
@@ -133,7 +137,7 @@ bool CanControl::write_frame(const std::uint32_t can_id, const mk_mini::FrameDat
   }
 
   can_frame frame{};
-  frame.can_id = can_id;
+  frame.can_id = socketcan::make_extended_can_id(can_id);
   frame.can_dlc = static_cast<__u8>(data.size());
   std::memcpy(frame.data, data.data(), data.size());
 
@@ -212,8 +216,9 @@ void CanControl::can_data_recv_callback()
     }
 
     const auto data = frame_data_from_can(recv_frame);
+    const auto protocol_can_id = socketcan::normalize_received_can_id(recv_frame.can_id);
     // 按 CAN ID 分发到对应协议解析函数；校验失败的帧会返回空值并被丢弃。
-    switch (recv_frame.can_id) {
+    switch (protocol_can_id) {
       case mk_mini::kCtrlFbId: {
           const auto feedback = mk_mini::decodeCtrlFeedback(data);
           if (!feedback) {
@@ -363,6 +368,7 @@ void CanControl::can_data_recv_callback()
           msg.veh_fb_aux_remote_close = feedback->aux_remote_close;
           msg.veh_fb_aux_remote_dis_on_line = feedback->aux_remote_dis_on_line;
           chassis_info_msg_.veh_diag_fb = msg;
+          veh_diag_fb_publisher_->publish(msg);
           publish_chassis_info();
           break;
         }

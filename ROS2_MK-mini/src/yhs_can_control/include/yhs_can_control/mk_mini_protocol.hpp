@@ -11,21 +11,23 @@ namespace yhs::mk_mini
 // MK-mini 每个 CAN 数据帧固定使用 8 字节，这里统一用 FrameData 表示 data[0]~data[7]。
 using FrameData = std::array<std::uint8_t, 8>;
 
-// 厂家 DBC 中定义的扩展帧 ID。命名规则：
+// 厂家 DBC 中定义的扩展帧 ID 去掉 SocketCAN 扩展帧标志后的 29-bit arbitration ID。
+// DBC 文件中的 0x98... 数值等于 CAN_EFF_FLAG | 0x18...；SocketCAN 标志由发送层统一添加。
+// 命名规则：
 // Cmd 表示上位机发给底盘的指令，Fb 表示底盘反馈给上位机的数据。
-constexpr std::uint32_t kCtrlCmdId = 0x98C4D2D0;
-constexpr std::uint32_t kIoCmdId = 0x98C4D7D0;
-constexpr std::uint32_t kCtrlFbId = 0x98C4D2EF;
-constexpr std::uint32_t kLrWheelFbId = 0x98C4D7EF;
-constexpr std::uint32_t kRrWheelFbId = 0x98C4D8EF;
-constexpr std::uint32_t kIoFbId = 0x98C4DAEF;
-constexpr std::uint32_t kDriveMcuEcodeFbId = 0x98C4DCEF;
-constexpr std::uint32_t kOdoFbId = 0x98C4DEEF;
-constexpr std::uint32_t kBmsInfoFbId = 0x98C4E1EF;
-constexpr std::uint32_t kBmsFlagInfoFbId = 0x98C4E2EF;
-constexpr std::uint32_t kUltrasonic1FbId = 0x98C4E8EF;
-constexpr std::uint32_t kUltrasonic2FbId = 0x98C4E9EF;
-constexpr std::uint32_t kVehDiagFbId = 0x98C4EAEF;
+constexpr std::uint32_t kCtrlCmdId = 0x18C4D2D0;
+constexpr std::uint32_t kIoCmdId = 0x18C4D7D0;
+constexpr std::uint32_t kCtrlFbId = 0x18C4D2EF;
+constexpr std::uint32_t kLrWheelFbId = 0x18C4D7EF;
+constexpr std::uint32_t kRrWheelFbId = 0x18C4D8EF;
+constexpr std::uint32_t kIoFbId = 0x18C4DAEF;
+constexpr std::uint32_t kDriveMcuEcodeFbId = 0x18C4DCEF;
+constexpr std::uint32_t kOdoFbId = 0x18C4DEEF;
+constexpr std::uint32_t kBmsInfoFbId = 0x18C4E1EF;
+constexpr std::uint32_t kBmsFlagInfoFbId = 0x18C4E2EF;
+constexpr std::uint32_t kUltrasonic1FbId = 0x18C4E8EF;
+constexpr std::uint32_t kUltrasonic2FbId = 0x18C4E9EF;
+constexpr std::uint32_t kVehDiagFbId = 0x18C4EAEF;
 
 struct CtrlCommand
 {

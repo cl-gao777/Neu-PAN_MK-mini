@@ -4,7 +4,7 @@ ackermann_safety_bridge:
     output_topic: /ctrl_cmd
     arm_topic: /neupan/drive_enable
     emergency_stop_topic: /neupan/emergency_stop
-    feedback_topic: /chassis_info_fb
+    diagnostic_topic: /veh_diag_fb
     status_topic: /neupan/safety_status
     publish_rate_hz: 50.0
     command_timeout_sec: 0.3

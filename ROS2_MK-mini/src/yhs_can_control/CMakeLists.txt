@@ -92,6 +92,10 @@ if(BUILD_TESTING)
   ament_add_gtest(test_mk_mini_protocol test/test_mk_mini_protocol.cpp)
   target_link_libraries(test_mk_mini_protocol mk_mini_protocol)
 
+  ament_add_gtest(test_socketcan_helpers test/test_socketcan_helpers.cpp)
+  target_include_directories(test_socketcan_helpers PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+
   ament_add_gtest(test_odom_distance_test_logic test/test_odom_distance_test_logic.cpp)
   target_include_directories(test_odom_distance_test_logic PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)

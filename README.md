@@ -33,7 +33,7 @@
 
 ## 推荐使用顺序
 
-1. 先进入 `ROS2_MK-mini/`，验证 MK-mini 底盘 SDK 能够构建、连接 CAN 总线并发布 `/ctrl_cmd`、`/chassis_info_fb`、`/odom` 等底盘接口。
+1. 先进入 `ROS2_MK-mini/`，验证 MK-mini 底盘 SDK 能够构建、连接 CAN 总线并发布 `/ctrl_cmd`、`/chassis_info_fb`、`/veh_diag_fb`、`/odom` 等底盘接口。
 2. 再进入 `neupan_mkmini_ws/`，按 `mkmini_neupan.repos` 导入上游依赖，并把 `ROS2_MK-mini/src/yhs_can_control` 与 `ROS2_MK-mini/src/yhs_can_interfaces` 复制到该工作区的 `src/`。
 3. 在 `neupan_mkmini_ws/` 内运行安全桥、SLAM/Nav2 和 NeuPAN 集成相关构建与测试。
 

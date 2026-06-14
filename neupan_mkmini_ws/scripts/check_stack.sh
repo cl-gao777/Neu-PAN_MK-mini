@@ -11,6 +11,7 @@ required_topics=(
   /neupan_cmd_vel
   /neupan/ackermann_cmd
   /chassis_info_fb
+  /veh_diag_fb
   /ctrl_cmd
 )
 
@@ -47,21 +48,23 @@ fi
 
 check_topic_hz() {
   local topic="$1"
+  local min_rate="${2:-10.0}"
   local output
   if ! output="$(timeout 6s ros2 topic hz "$topic" --window 50 2>&1)"; then
     printf "BAD     %s frequency probe failed\n%s\n" "$topic" "$output"
     failed=1
     return
   fi
-  if awk '/average rate:/ {rate=$3} END {exit !(rate >= 10.0)}' <<<"$output"; then
-    printf "OK      %s >= 10 Hz\n" "$topic"
+  if awk -v min_rate="$min_rate" '/average rate:/ {rate=$3} END {exit !(rate >= min_rate)}' <<<"$output"; then
+    printf "OK      %s >= %s Hz\n" "$topic" "$min_rate"
   else
-    printf "BAD     %s must publish at >= 10 Hz\n%s\n" "$topic" "$output"
+    printf "BAD     %s must publish at >= %s Hz\n%s\n" "$topic" "$min_rate" "$output"
     failed=1
   fi
 }
 
 check_topic_hz /neupan_cmd_vel
 check_topic_hz /neupan/ackermann_cmd
+check_topic_hz /veh_diag_fb 2.0
 
 exit "$failed"

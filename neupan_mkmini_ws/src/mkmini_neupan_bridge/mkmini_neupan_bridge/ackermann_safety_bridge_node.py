@@ -5,7 +5,7 @@ from rclpy.node import Node
 from rclpy.time import Time
 from std_msgs.msg import Bool
 from tf2_ros import Buffer, TransformException, TransformListener
-from yhs_can_interfaces.msg import ChassisInfoFb, CtrlCmd
+from yhs_can_interfaces.msg import CtrlCmd, VehDiagFb
 
 from .adapters import chassis_feedback_is_healthy, timer_period_from_rate
 from .safety import AckermannCommand, BridgeConfig, SafetyBridge
@@ -35,7 +35,7 @@ class AckermannSafetyBridgeNode(Node):
         emergency_stop_topic = self._param(
             "emergency_stop_topic", "/neupan/emergency_stop"
         )
-        feedback_topic = self._param("feedback_topic", "/chassis_info_fb")
+        diagnostic_topic = self._param("diagnostic_topic", "/veh_diag_fb")
         status_topic = self._param("status_topic", "/neupan/safety_status")
         self._localization_target_frame = self._param(
             "localization_target_frame", "map"
@@ -58,9 +58,7 @@ class AckermannSafetyBridgeNode(Node):
         self.create_subscription(
             Bool, emergency_stop_topic, self._emergency_stop_callback, 10
         )
-        self.create_subscription(
-            ChassisInfoFb, feedback_topic, self._feedback_callback, 10
-        )
+        self.create_subscription(VehDiagFb, diagnostic_topic, self._diagnostic_callback, 10)
         self.create_timer(timer_period_from_rate(publish_rate_hz), self._publish_control)
 
         self.get_logger().warn(
@@ -87,8 +85,7 @@ class AckermannSafetyBridgeNode(Node):
     def _emergency_stop_callback(self, message: Bool) -> None:
         self._bridge.set_emergency_stop(bool(message.data), self._now_sec())
 
-    def _feedback_callback(self, message: ChassisInfoFb) -> None:
-        diagnostic = message.veh_diag_fb
+    def _diagnostic_callback(self, diagnostic: VehDiagFb) -> None:
         healthy = chassis_feedback_is_healthy(
             fault_level=int(diagnostic.veh_fb_fault_level),
             auto_can_ctrl=bool(diagnostic.veh_fb_auto_can_ctrl_cmd),

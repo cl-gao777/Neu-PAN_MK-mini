@@ -49,8 +49,10 @@ candump can0
 | `/ctrl_cmd` | `yhs_can_interfaces/msg/CtrlCmd` | 订阅 | 底盘运动指令。 |
 | `/io_cmd` | `yhs_can_interfaces/msg/IoCmd` | 订阅 | 灯光、喇叭、放电和 IO 指令。 |
 | `/chassis_info_fb` | `yhs_can_interfaces/msg/ChassisInfoFb` | 发布 | 聚合后的底盘反馈。 |
+| `/veh_diag_fb` | `yhs_can_interfaces/msg/VehDiagFb` | 发布 | 专用整车诊断反馈，仅随诊断扩展 CAN 帧更新。 |
 
-当前 SDK 保留这些接口，并新增面向 Nav2 的 `/cmd_vel`、`/odom` 和可选 odom TF 发布。
+当前 SDK 保留这些接口，并新增面向 Nav2 的 `/cmd_vel`、`/odom`、专用 `/veh_diag_fb`
+和可选 odom TF 发布。
 
 ## 官方字段说明摘录
 
@@ -76,7 +78,7 @@ candump can0
   - `lr_wheel_fb`、`rr_wheel_fb`：后轮速度和脉冲反馈。
   - `bms_flag_info_fb`、`bms_info_fb`：BMS 状态和标志位。
   - `drive_mcu_ecode_fb`：驱动 MCU 错误码。
-  - `veh_diag_fb`：底盘诊断位。
+  - `veh_diag_fb`：聚合消息中的最近一次底盘诊断位。安全桥诊断新鲜度使用专用 `/veh_diag_fb`。
   - `ultrasonic`：超声波距离反馈。
 
 ## 本 SDK 的差异

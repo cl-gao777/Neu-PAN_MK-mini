@@ -6,7 +6,7 @@
 
 | 节点 | 可执行文件 | 职责 |
 | --- | --- | --- |
-| `yhs_can_control_node` | `yhs_can_control_node` | SocketCAN 桥接、CAN 反馈解析、`/chassis_info_fb`、`/odom`、odom TF。 |
+| `yhs_can_control_node` | `yhs_can_control_node` | SocketCAN 扩展帧桥接、CAN 反馈解析、`/chassis_info_fb`、`/veh_diag_fb`、`/odom`、odom TF。 |
 | `cmd_vel_to_ctrl_cmd_node` | `cmd_vel_to_ctrl_cmd_node` | 将 Nav2 风格的 `/cmd_vel` 指令转换为 MK-mini `/ctrl_cmd`。 |
 
 默认 launch 文件会同时启动两个节点：
@@ -23,7 +23,8 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 | `/io_cmd` | `yhs_can_interfaces/msg/IoCmd` | 订阅 | `yhs_can_control_node` | 灯光、喇叭、放电和 IO 控制指令。 |
 | `/cmd_vel` | `geometry_msgs/msg/Twist` | 订阅 | `cmd_vel_to_ctrl_cmd_node` | 默认 Nav2 速度指令输入。 |
 | `/cmd_vel` | `geometry_msgs/msg/TwistStamped` | 可选订阅 | `cmd_vel_to_ctrl_cmd_node` | 当 `use_stamped_cmd_vel=true` 时启用。 |
-| `/chassis_info_fb` | `yhs_can_interfaces/msg/ChassisInfoFb` | 发布 | `yhs_can_control_node` | 聚合后的底盘反馈。 |
+| `/chassis_info_fb` | `yhs_can_interfaces/msg/ChassisInfoFb` | 发布 | `yhs_can_control_node` | 聚合后的底盘反馈，每解析到任意反馈帧都会更新。 |
+| `/veh_diag_fb` | `yhs_can_interfaces/msg/VehDiagFb` | 发布 | `yhs_can_control_node` | 专用整车诊断反馈，仅在真实诊断 CAN 帧到达时更新。 |
 | `/odom` | `nav_msgs/msg/Odometry` | 发布 | `yhs_can_control_node` | 优先使用底盘里程计反馈；不可用时使用速度积分回退。 |
 | `/tf` | `tf2_msgs/msg/TFMessage` | 发布 | `yhs_can_control_node` | 当 `publish_odom_tf=true` 时发布 `odom -> base_link`。 |
 
@@ -33,7 +34,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 | 字段 | 类型 | 含义 |
 | --- | --- | --- |
-| `ctrl_cmd_gear` | `uint8` | 底盘挡位指令。当前适配器默认前进为 `1`，倒车为 `2`。 |
+| `ctrl_cmd_gear` | `uint8` | 底盘挡位指令。当前适配器默认前进为 `4`，倒车为 `2`。 |
 | `ctrl_cmd_velocity` | `float32` | 目标速度，单位 m/s。CAN 协议编码时按 1000 倍缩放。 |
 | `ctrl_cmd_steering` | `float32` | 目标转角，单位度。CAN 协议编码时按 100 倍缩放。 |
 
@@ -69,7 +70,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 | `odo_fb` | 累计里程和累计角度反馈。 |
 | `bms_flag_info_fb`, `bms_info_fb` | BMS 标志位、电压、电流、容量和温度。 |
 | `drive_mcu_ecode_fb` | 驱动 MCU 错误码反馈。 |
-| `veh_diag_fb` | 底盘诊断标志位。 |
+| `veh_diag_fb` | 最近一次聚合到 `ChassisInfoFb` 的底盘诊断标志位。安全桥诊断新鲜度应使用专用 `/veh_diag_fb`。 |
 | `ultrasonic` | 超声波距离反馈。 |
 
 ## 参数
@@ -96,11 +97,11 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 | `wheel_base` | `0.6` | 用于 Ackermann 转向换算的轴距。 |
 | `ctrl_cmd_publish_rate_hz` | `50.0` | 保活控制指令发布频率。 |
 | `cmd_vel_timeout_sec` | `0.3` | 超时后发布停车指令的等待时间。 |
-| `max_velocity_mps` | `0.3` | 对 `/cmd_vel` 生效的绝对速度限幅。 |
+| `max_velocity_mps` | `0.8` | 对底盘 SDK `/cmd_vel` 适配器生效的绝对速度限幅。 |
 | `max_steering_deg` | `25.0` | 绝对转角限幅。 |
 | `allow_reverse` | `false` | 未显式启用时拒绝倒车 `/cmd_vel` 指令。 |
 | `use_stamped_cmd_vel` | `false` | 在 `input_topic` 上使用 `TwistStamped` 而不是 `Twist`。 |
-| `forward_gear` | `1` | 前进和停车指令使用的挡位值。 |
+| `forward_gear` | `4` | 前进和停车指令使用的挡位值。 |
 | `reverse_gear` | `2` | 启用倒车时使用的挡位值。 |
 
 ## Nav2 指令行为

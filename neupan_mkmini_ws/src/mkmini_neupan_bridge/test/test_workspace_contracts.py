@@ -34,7 +34,38 @@ class WorkspaceContractTest(unittest.TestCase):
 
         self.assertIn("require_localization: true", formal)
         self.assertIn("require_localization: false", bench)
-        self.assertIn("max_speed_mps: 0.1", bench)
+        self.assertIn("max_speed_mps: 0.3", bench)
+
+    def test_safety_bridge_uses_dedicated_diagnostic_topic(self):
+        config_dir = (
+            WORKSPACE_ROOT / "src" / "mkmini_neupan_bridge" / "config"
+        )
+        formal = (config_dir / "safety_bridge.yaml").read_text(encoding="utf-8")
+        bench = (config_dir / "safety_bridge_bench.yaml").read_text(encoding="utf-8")
+        bridge_node = (
+            WORKSPACE_ROOT
+            / "src"
+            / "mkmini_neupan_bridge"
+            / "mkmini_neupan_bridge"
+            / "ackermann_safety_bridge_node.py"
+        ).read_text(encoding="utf-8")
+        can_node = (
+            MONOREPO_ROOT
+            / "ROS2_MK-mini"
+            / "src"
+            / "yhs_can_control"
+            / "src"
+            / "yhs_can_control_node.cpp"
+        ).read_text(encoding="utf-8")
+
+        for config in (formal, bench):
+            with self.subTest(config=config[:40]):
+                self.assertIn("diagnostic_topic: /veh_diag_fb", config)
+                self.assertNotIn("feedback_topic:", config)
+        self.assertIn("VehDiagFb", bridge_node)
+        self.assertIn('"diagnostic_topic", "/veh_diag_fb"', bridge_node)
+        self.assertIn("create_publisher<yhs_can_interfaces::msg::VehDiagFb>", can_node)
+        self.assertIn("veh_diag_fb_publisher_->publish(msg)", can_node)
 
     def test_all_mkmini_control_configs_use_official_drive_gear(self):
         bridge_config = (
@@ -64,6 +95,18 @@ class WorkspaceContractTest(unittest.TestCase):
             with self.subTest(config=config[:40]):
                 self.assertIn("forward_gear: 4", config)
                 self.assertIn("reverse_gear: 2", config)
+
+    def test_vendor_cmd_vel_adapter_default_limit_is_0_8_mps(self):
+        vendor_config = (
+            MONOREPO_ROOT
+            / "ROS2_MK-mini"
+            / "src"
+            / "yhs_can_control"
+            / "params"
+            / "cfg.yaml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("max_velocity_mps: 0.8", vendor_config)
 
     def test_ctrl_cmd_message_documents_official_gear_enum(self):
         message = (
@@ -160,9 +203,18 @@ class WorkspaceContractTest(unittest.TestCase):
         self.assertIn("ros2 topic info /ctrl_cmd", script)
         self.assertIn("Publisher count: 1", script)
         self.assertIn("cmd_vel_to_ctrl_cmd_node", script)
+        self.assertIn("/veh_diag_fb", script)
         self.assertIn("check_topic_hz /neupan_cmd_vel", script)
         self.assertIn("check_topic_hz /neupan/ackermann_cmd", script)
-        self.assertIn("rate >= 10.0", script)
+        self.assertIn("check_topic_hz /veh_diag_fb 2.0", script)
+        self.assertIn("rate >= min_rate", script)
+
+    def test_acceptance_recording_captures_dedicated_diagnostic_topic(self):
+        script = (
+            WORKSPACE_ROOT / "scripts" / "record_acceptance_run.sh"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("/veh_diag_fb", script)
 
     def test_runtime_check_treats_missing_checkpoint_as_hard_failure(self):
         script = (WORKSPACE_ROOT / "scripts" / "check_neupan_runtime.py").read_text(

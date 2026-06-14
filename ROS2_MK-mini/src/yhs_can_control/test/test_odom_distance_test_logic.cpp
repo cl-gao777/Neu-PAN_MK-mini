@@ -45,18 +45,18 @@ TEST(OdomDistanceTestLogic, CommandsVelocityUntilTargetDistance)
   Config config;
   config.armed = true;
   config.target_distance_m = 1.0;
-  config.target_speed_mps = 0.05;
+  config.target_speed_mps = 0.3;
   config.distance_tolerance_m = 0.01;
   DistanceTestController controller;
 
   const auto start = controller.update(config, OdomSample{0.0, 0.0}, 10.0);
   EXPECT_TRUE(start.started_now);
   EXPECT_FALSE(start.terminal);
-  EXPECT_DOUBLE_EQ(start.command_velocity_mps, 0.05);
+  EXPECT_DOUBLE_EQ(start.command_velocity_mps, 0.3);
 
   const auto running = controller.update(config, OdomSample{0.5, 0.0}, 20.0);
   EXPECT_FALSE(running.terminal);
-  EXPECT_DOUBLE_EQ(running.command_velocity_mps, 0.05);
+  EXPECT_DOUBLE_EQ(running.command_velocity_mps, 0.3);
   EXPECT_NEAR(running.odom_distance_m, 0.5, 1e-9);
 
   const auto finished = controller.update(config, OdomSample{0.99, 0.0}, 30.0);
@@ -71,7 +71,7 @@ TEST(OdomDistanceTestLogic, StopsOnTimeout)
   Config config;
   config.armed = true;
   config.target_distance_m = 2.0;
-  config.target_speed_mps = 0.05;
+  config.target_speed_mps = 0.3;
   config.max_runtime_sec = 5.0;
   DistanceTestController controller;
 

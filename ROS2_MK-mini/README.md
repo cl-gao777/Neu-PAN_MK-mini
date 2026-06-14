@@ -2,7 +2,7 @@
 
 本仓库是面向 **宇合森 MK-mini** 底盘的 ROS 2 工作区，目标运行环境为 **Ubuntu 24.04 + ROS 2 Jazzy**。项目保留厂商 ROS 2 包名和消息接口，并补充了 MK-mini 在导航、底盘反馈、里程计和实车测试中需要的工程化封装。
 
-> 注意：仓库名为 `Neu-PAN_MK-mini`，但本目录本身是 MK-mini 底盘 ROS 2 SDK。它可以作为 NeuPAN 集成链路中的底盘驱动层使用；NeuPAN 到底盘的安全桥接可在上层工作区中接入本仓库提供的 `/ctrl_cmd`、`/chassis_info_fb`、`/odom` 等接口。
+> 注意：仓库名为 `Neu-PAN_MK-mini`，但本目录本身是 MK-mini 底盘 ROS 2 SDK。它可以作为 NeuPAN 集成链路中的底盘驱动层使用；NeuPAN 到底盘的安全桥接可在上层工作区中接入本仓库提供的 `/ctrl_cmd`、`/chassis_info_fb`、`/veh_diag_fb`、`/odom` 等接口。
 
 ## 项目做了什么
 
@@ -16,7 +16,7 @@
 核心能力：
 
 - 通过 `can4` 与 MK-mini 底盘通信；`can_name` 参数仍可覆盖为其他 SocketCAN 接口。
-- 将底盘 CAN 反馈解析为 ROS 2 话题。
+- 将底盘扩展 CAN 反馈解析为 ROS 2 话题。
 - 发布 `/odom` 里程计和 `odom -> base_link` TF。
 - 提供 `cmd_vel_to_ctrl_cmd_node`，把 Nav2 或其他上层控制器的 `/cmd_vel` 转为 MK-mini 底盘控制命令 `/ctrl_cmd`。
 - 提供 `odom_distance_test_node`，用于低速直线行驶并验证里程计距离误差。
@@ -114,7 +114,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 | 节点 | 功能 |
 | --- | --- |
-| `yhs_can_control_node` | 连接 CAN，总线收发，发布底盘反馈、里程计和 TF。 |
+| `yhs_can_control_node` | 连接 CAN，总线收发，发布聚合反馈、诊断反馈、里程计和 TF。 |
 | `cmd_vel_to_ctrl_cmd_node` | 订阅 `/cmd_vel`，转换并发布 `/ctrl_cmd`。 |
 
 使用自定义参数文件：
@@ -136,7 +136,8 @@ src/yhs_can_control/params/cfg.yaml
 | --- | --- | --- |
 | `/cmd_vel` | 输入 | 上层导航或控制器输出的速度指令，类型通常为 `geometry_msgs/msg/Twist`。 |
 | `/ctrl_cmd` | 输出到底盘 | MK-mini 底盘控制命令，类型为 `yhs_can_interfaces/msg/CtrlCmd`。 |
-| `/chassis_info_fb` | 底盘反馈 | 底盘状态、故障、车速、电池、诊断等综合反馈。 |
+| `/chassis_info_fb` | 底盘聚合反馈 | 底盘状态、故障、车速、电池、诊断等综合反馈。 |
+| `/veh_diag_fb` | 整车诊断反馈 | 仅在收到真实整车诊断 CAN 帧时发布，供安全桥判断诊断新鲜度。 |
 | `/odom` | 输出 | 里程计，供 Nav2 或上层定位导航使用。 |
 | `odom -> base_link` | TF | 底盘里程计坐标变换。 |
 
@@ -145,6 +146,7 @@ src/yhs_can_control/params/cfg.yaml
 ```bash
 ros2 topic list
 ros2 topic echo /chassis_info_fb
+ros2 topic echo /veh_diag_fb
 ros2 topic echo /odom
 ros2 run tf2_ros tf2_echo odom base_link
 ```
@@ -157,7 +159,7 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.05}, angular: {z: 0.0}}"
+  "{linear: {x: 0.3}, angular: {z: 0.0}}"
 ```
 
 停止：
@@ -185,7 +187,7 @@ Nav2 或 NeuPAN 上层控制器
   -> MK-mini 底盘
 ```
 
-如果接入 NeuPAN，建议在上层增加安全桥，显式处理解锁、急停、反馈超时、定位超时、速度限幅和转角限幅，再输出 `/ctrl_cmd`。
+如果接入 NeuPAN，建议在上层增加安全桥，显式处理解锁、急停、诊断反馈超时、定位超时、速度限幅和转角限幅，再输出 `/ctrl_cmd`。安全桥应使用 `/veh_diag_fb` 判断诊断帧新鲜度，而不是用聚合反馈刷新诊断状态。
 
 ## 里程计精度测试
 
@@ -195,7 +197,7 @@ Nav2 或 NeuPAN 上层控制器
 ros2 run yhs_can_control odom_distance_test_node --ros-args \
   -p armed:=true \
   -p target_distance_m:=1.0 \
-  -p target_speed_mps:=0.05
+  -p target_speed_mps:=0.3
 ```
 
 该节点会：
@@ -244,8 +246,8 @@ colcon test-result --verbose
 - 车辆架空或处在受控低速测试区。
 - 有物理急停或遥控器接管能力。
 - CAN 线束、供电和终端电阻确认无误。
-- 初始速度限制在低速，例如 `0.05 m/s`。
-- 先确认 `/chassis_info_fb`、`/odom` 和 TF 正常，再发送运动命令。
+- 初始速度使用实测可响应下限 `0.3 m/s`，并确保测试区域和急停条件满足安全要求。
+- 先确认 `/chassis_info_fb`、`/veh_diag_fb`、`/odom` 和 TF 正常，再发送运动命令。
 
 任何异常都应立即发送零速度命令，并使用物理急停或遥控器接管。
 
@@ -266,7 +268,7 @@ colcon test-result --verbose
 
 1. `can4` 是否存在并已 `UP`。
 2. `candump can4` 是否能看到底盘 CAN 帧。
-3. `/chassis_info_fb` 是否有数据。
+3. `/chassis_info_fb` 和 `/veh_diag_fb` 是否有数据。
 4. `/cmd_vel` 是否有发布。
 5. `/ctrl_cmd` 是否由适配节点输出。
 6. 底盘是否处于允许控制的档位和模式。
