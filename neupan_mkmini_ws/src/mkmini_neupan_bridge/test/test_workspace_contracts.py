@@ -151,6 +151,8 @@ class WorkspaceContractTest(unittest.TestCase):
 
         self.assertIn("get_package_share_directory", launch_file)
         self.assertIn("REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT", launch_file)
+        self.assertIn("dune_checkpoint", launch_file)
+        self.assertIn("is_file", launch_file)
         self.assertIn("RuntimeError", launch_file)
 
     def test_full_stack_can_pass_custom_neupan_config_to_neupan_launch(self):
@@ -223,6 +225,103 @@ class WorkspaceContractTest(unittest.TestCase):
 
         self.assertIn("REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT", script)
         self.assertIn("Train MK-mini DUNE", script)
+
+    def test_thor_preflight_command_is_documented_before_neupan_launch(self):
+        readme = (WORKSPACE_ROOT / "README.md").read_text(encoding="utf-8")
+        safety_checklist = (
+            WORKSPACE_ROOT / "docs" / "safety-checklist.md"
+        ).read_text(encoding="utf-8")
+        setup_py = (
+            WORKSPACE_ROOT
+            / "src"
+            / "mkmini_neupan_bringup"
+            / "setup.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("thor_neupan_preflight", setup_py)
+        self.assertIn(
+            "ros2 run mkmini_neupan_bringup thor_neupan_preflight",
+            readme,
+        )
+        self.assertIn(
+            "ros2 launch mkmini_neupan_bringup full_stack.launch.py",
+            readme,
+        )
+        self.assertIn(
+            "ros2 run mkmini_neupan_bringup thor_neupan_preflight",
+            safety_checklist,
+        )
+
+    def test_real_robot_one_click_scripts_are_safe_contracts(self):
+        host_script = (
+            MONOREPO_ROOT / "docker" / "start_real_robot_neupan.sh"
+        ).read_text(encoding="utf-8")
+        container_runner = (
+            WORKSPACE_ROOT / "scripts" / "start_real_robot_neupan.sh"
+        ).read_text(encoding="utf-8")
+        combined = host_script + "\n" + container_runner
+
+        self.assertIn("/.dockerenv", host_script)
+        self.assertIn("MKMINI_IN_CONTAINER", host_script)
+        self.assertIn("docker exec", host_script)
+        self.assertIn("docker run", host_script)
+        self.assertIn("--network host", host_script)
+        self.assertIn("--privileged", host_script)
+        self.assertIn("CAN_IFACE", host_script)
+        self.assertIn("LIDAR_HOST_CIDR", host_script)
+        self.assertIn("thor_neupan_preflight", container_runner)
+        self.assertIn(
+            "ros2 launch mkmini_neupan_bringup full_stack.launch.py",
+            container_runner,
+        )
+        self.assertIn("start_neupan:=true", container_runner)
+        self.assertIn("disarm_bridge.sh", container_runner)
+        self.assertIn("start_neupan:=*", container_runner)
+        cleanup_start = container_runner.index("cleanup() {")
+        self.assertLess(
+            container_runner.index("disarm_bridge_once", cleanup_start),
+            container_runner.index('kill -INT "${LAUNCH_PID}"', cleanup_start),
+        )
+        self.assertNotIn("arm_bridge.sh I_HAVE_REMOTE_AND_ESTOP", combined)
+        self.assertNotIn("bash scripts/arm_bridge.sh", combined)
+
+    def test_real_robot_one_click_launch_is_documented(self):
+        docker_readme = (MONOREPO_ROOT / "docker" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        readme = (WORKSPACE_ROOT / "README.md").read_text(encoding="utf-8")
+        safety_checklist = (
+            WORKSPACE_ROOT / "docs" / "safety-checklist.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("bash docker/start_real_robot_neupan.sh", docker_readme)
+        self.assertIn(
+            "bash docker/start_real_robot_neupan.sh --dry-run",
+            docker_readme,
+        )
+        self.assertIn(
+            "bash /workspaces/MK-mini_ws/neupan_mkmini_ws/scripts/start_real_robot_neupan.sh --dry-run",
+            docker_readme,
+        )
+        self.assertIn("bash docker/start_real_robot_neupan.sh", readme)
+        self.assertIn("bash scripts/start_real_robot_neupan.sh --dry-run", readme)
+        self.assertIn("bash docker/start_real_robot_neupan.sh", safety_checklist)
+        self.assertIn("不会自动解锁", safety_checklist)
+
+    def test_neupan_output_frequency_is_post_launch_acceptance_only(self):
+        checklist = (
+            WORKSPACE_ROOT / "docs" / "safety-checklist.md"
+        ).read_text(encoding="utf-8")
+        preflight_section = checklist.split("## NeuPAN 启动前附加检查", 1)[1].split(
+            "## NeuPAN 启动后验收",
+            1,
+        )[0]
+        post_launch_section = checklist.split("## NeuPAN 启动后验收", 1)[1]
+
+        self.assertNotIn("/neupan_cmd_vel", preflight_section)
+        self.assertNotIn("/neupan/ackermann_cmd", preflight_section)
+        self.assertIn("/neupan_cmd_vel", post_launch_section)
+        self.assertIn("/neupan/ackermann_cmd", post_launch_section)
 
     def test_import_upstreams_script_imports_all_required_sources(self):
         script = (WORKSPACE_ROOT / "scripts" / "import_upstreams.sh").read_text(

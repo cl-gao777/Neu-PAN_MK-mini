@@ -81,6 +81,51 @@ bash run_mkmini_dev.sh
 
 每次需要进入容器开发/测试时执行即可。容器退出后自动删除（`--rm`），代码不受影响。
 
+### 第 4 步：真机一键启动 NeuPAN
+
+完成镜像构建、CAN 与 LiDAR 宿主机配置、NeuPAN workspace 构建和 checkpoint 配置后，可以从 Thor 宿主机直接运行：
+
+```bash
+cd ~/workspaces/MK-mini_ws
+bash docker/start_real_robot_neupan.sh
+```
+
+这个入口会先检查宿主机 workspace、Docker 镜像、`can4` 是否存在且为 UP、LiDAR 网段是否配置，然后进入或复用 `mkmini-dev` 容器；容器内会先运行 `ros2 run mkmini_neupan_bringup thor_neupan_preflight`，只有 preflight 通过后才启动：
+
+```bash
+ros2 launch mkmini_neupan_bringup full_stack.launch.py start_neupan:=true
+```
+
+如果你已经在容器里误执行同一个宿主机入口：
+
+```bash
+bash /workspaces/MK-mini_ws/docker/start_real_robot_neupan.sh
+```
+
+脚本会检测 `/.dockerenv` 或 `MKMINI_IN_CONTAINER=1`，直接转发到 `/workspaces/MK-mini_ws/neupan_mkmini_ws/scripts/start_real_robot_neupan.sh`，不会再尝试调用 Docker。
+
+正式运行前建议先看 dry-run：
+
+```bash
+bash docker/start_real_robot_neupan.sh --dry-run
+bash /workspaces/MK-mini_ws/neupan_mkmini_ws/scripts/start_real_robot_neupan.sh --dry-run
+```
+
+常用覆盖项：
+
+```bash
+MKMINI_HOST_WS=/data/MK-mini_ws \
+MKMINI_IMAGE=mkmini-jazzy:dev \
+CAN_IFACE=can4 \
+LIDAR_HOST_CIDR=192.168.1.50/24 \
+bash docker/start_real_robot_neupan.sh \
+  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/neupan_site.yaml \
+  start_mid360:=true \
+  start_scan_pipeline:=true
+```
+
+脚本不会自动执行 `scripts/arm_bridge.sh`，不会自动解锁安全桥，也不会发布运动命令。通过 preflight 并启动 NeuPAN 后，仍需人工确认遥控接管、物理急停、安全员和测试区域，再手动解锁。
+
 ## 4. 场景手册
 
 以下各场景均在内启动后执行。所有脚本和命令**无需手动记容器路径**。

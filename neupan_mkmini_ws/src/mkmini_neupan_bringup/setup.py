@@ -27,6 +27,8 @@ setup(
         "console_scripts": [
             "custom_msg_to_pointcloud2 = "
             "mkmini_neupan_bringup.custom_msg_to_pointcloud2_node:main",
+            "thor_neupan_preflight = "
+            "mkmini_neupan_bringup.thor_neupan_preflight_node:main",
         ],
     },
 )

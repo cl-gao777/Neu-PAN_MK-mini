@@ -140,7 +140,58 @@ pan:
   dune_checkpoint: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
 ```
 
-确认 `/scan`、`/plan`、`map -> base_link`、`/veh_diag_fb`、`/neupan_cmd_vel` 与 `/neupan/ackermann_cmd` 均正常后，再启动：
+真机上推荐使用宿主机一键入口：
+
+```bash
+cd ~/workspaces/MK-mini_ws
+bash docker/start_real_robot_neupan.sh --dry-run
+bash docker/start_real_robot_neupan.sh
+```
+
+该入口会在宿主机检查 workspace、Docker 镜像、CAN 与 LiDAR 基本状态，然后进入或复用 `mkmini-dev` 容器，在容器内运行 Thor preflight；preflight 通过后才自动启动 `full_stack.launch.py start_neupan:=true`。如果已经在容器内执行同一个 `docker/start_real_robot_neupan.sh`，脚本会直接转发到容器内 runner，不会递归启动 Docker。
+
+容器内也可以直接 dry-run 或运行 runner：
+
+```bash
+bash scripts/start_real_robot_neupan.sh --dry-run
+bash scripts/start_real_robot_neupan.sh
+```
+
+需要现场参数时，一键脚本和正式 launch 使用同一组参数；`start_neupan:=...` 会被 runner 忽略，preflight 固定为 false，正式启动固定为 true：
+
+```bash
+bash docker/start_real_robot_neupan.sh \
+  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/neupan_site.yaml \
+  start_mid360:=true \
+  start_scan_pipeline:=true
+```
+
+一键脚本不会自动解锁安全桥，不会运行 `scripts/arm_bridge.sh`，也不会发布运动命令；Ctrl+C 或退出时会 best-effort 执行 `scripts/disarm_bridge.sh`。
+
+启动 NeuPAN 前，先运行 Thor preflight。该命令会自动拉起
+`full_stack.launch.py start_neupan:=false` 的前置栈，检查 Python 运行时、
+MK-mini DUNE checkpoint、关键话题与频率、`cmd_vel_to_ctrl_cmd_node` 冲突、
+`/ctrl_cmd` 发布者数量，以及 `map -> base_link` TF；检查结束后会关闭前置栈。
+
+preflight 使用的 launch 参数应与正式启动保持一致，只是不要传入
+`start_neupan:=true`：
+
+```bash
+ros2 run mkmini_neupan_bringup thor_neupan_preflight \
+  start_mid360:=false \
+  start_visualization_cloud:=false \
+  start_scan_pipeline:=true
+```
+
+若使用现场专用 NeuPAN 配置，也在 preflight 中传入同一个配置：
+
+```bash
+ros2 run mkmini_neupan_bringup thor_neupan_preflight \
+  --neupan-config /absolute/path/to/neupan_mkmini.yaml \
+  start_scan_pipeline:=true
+```
+
+只有 preflight 最终输出 `RESULT  PASS` 后，再用相同参数启动 NeuPAN：
 
 ```bash
 ros2 launch mkmini_neupan_bringup full_stack.launch.py \
@@ -148,6 +199,13 @@ ros2 launch mkmini_neupan_bringup full_stack.launch.py \
   start_visualization_cloud:=false \
   start_scan_pipeline:=true \
   start_neupan:=true
+```
+
+NeuPAN 启动后，再验收算法输出频率：
+
+```bash
+ros2 topic hz /neupan_cmd_vel
+ros2 topic hz /neupan/ackermann_cmd
 ```
 
 如需使用现场专用 NeuPAN 配置，可显式传入：

@@ -40,9 +40,18 @@
 ## NeuPAN 启动前附加检查
 
 - [ ] `neupan_ros2`、`FAST_LIO`、`livox_ros_driver2` 和 `third_party/NeuPAN` 已通过 `scripts/import_upstreams.sh` 导入并构建。
+- [ ] 若从宿主机一键启动，先运行 `bash docker/start_real_robot_neupan.sh --dry-run`，确认 workspace、镜像、CAN、LiDAR 和传入 launch 参数符合现场配置。
+- [ ] 真机一键启动命令为 `bash docker/start_real_robot_neupan.sh`；如果已经在容器内，可直接运行 `bash scripts/start_real_robot_neupan.sh --dry-run` 或 `bash scripts/start_real_robot_neupan.sh`。该脚本不会自动解锁安全桥，也不会自动发布运动命令。
+- [ ] 已运行 `ros2 run mkmini_neupan_bringup thor_neupan_preflight`，且最终输出 `RESULT  PASS`。
+- [ ] preflight 使用的 `start_scan_pipeline:=true`、`start_mid360:=true/false`、`neupan_config:=...` 等参数与正式 `full_stack.launch.py start_neupan:=true` 启动命令一致。
 - [ ] `/scan` 达到预期频率，且来自当前唯一的 `/livox/points` 转换链路。
-- [ ] `/plan` 由 Nav2 planner 正常发布。
-- [ ] `/neupan_cmd_vel` 与 `/neupan/ackermann_cmd` 均达到 10 Hz 以上。
+- [ ] `/plan` 由 Nav2 planner 正常发布；若现场 Nav2 只有收到目标后才发布 `/plan`，需先给出测试目标再运行 preflight。
 - [ ] `/veh_diag_fb` 持续更新，且诊断状态无故障、急停和 EPS 故障。
 - [ ] `neupan_mkmini.yaml` 已替换为训练好的 MK-mini DUNE checkpoint。
 - [ ] `full_stack.launch.py start_neupan:=true` 只在上述条件满足后使用。
+
+## NeuPAN 启动后验收
+
+- [ ] `/neupan_cmd_vel` 与 `/neupan/ackermann_cmd` 均达到 10 Hz 以上。
+- [ ] `/ctrl_cmd` 仍只有安全桥一个发布者。
+- [ ] 厂商 `cmd_vel_to_ctrl_cmd_node` 仍未运行。

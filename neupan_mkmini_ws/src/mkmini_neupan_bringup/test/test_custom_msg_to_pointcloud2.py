@@ -77,10 +77,12 @@ class CustomMsgToPointCloud2Test(unittest.TestCase):
         package_xml = (PACKAGE_ROOT / "package.xml").read_text(encoding="utf-8")
 
         self.assertIn("custom_msg_to_pointcloud2", setup_py)
+        self.assertIn("thor_neupan_preflight", setup_py)
         self.assertIn("find_packages", setup_py)
         self.assertIn('glob("config/*.json")', setup_py)
         self.assertIn("<exec_depend>livox_ros_driver2</exec_depend>", package_xml)
         self.assertIn("<exec_depend>sensor_msgs_py</exec_depend>", package_xml)
+        self.assertIn("<exec_depend>tf2_ros</exec_depend>", package_xml)
 
     def test_mid360_config_matches_thor_network_contract(self):
         config = json.loads(

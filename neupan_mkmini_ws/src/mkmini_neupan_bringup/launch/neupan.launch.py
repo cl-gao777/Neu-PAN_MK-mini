@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 from launch import LaunchDescription
@@ -8,6 +9,26 @@ from launch_ros.actions import Node
 
 
 CHECKPOINT_PLACEHOLDER = "REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT"
+
+
+def _extract_dune_checkpoint(config_text):
+    in_pan_block = False
+    pan_indent = 0
+    for line in config_text.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        indent = len(line) - len(line.lstrip())
+        if stripped == "pan:":
+            in_pan_block = True
+            pan_indent = indent
+            continue
+        if in_pan_block and indent <= pan_indent:
+            in_pan_block = False
+        if in_pan_block and stripped.startswith("dune_checkpoint:"):
+            value = stripped.split(":", 1)[1].strip()
+            return value.strip("\"'")
+    return None
 
 
 def _checked_neupan_node(context):
@@ -39,6 +60,17 @@ def _checked_neupan_node(context):
             "Train MK-mini DUNE before launching NeuPAN on the robot. "
             "Replace REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT in "
             f"{config_path} with the trained checkpoint path."
+        )
+    checkpoint = _extract_dune_checkpoint(config)
+    if not checkpoint:
+        raise RuntimeError(
+            f"pan.dune_checkpoint is missing from NeuPAN config: {config_path}"
+        )
+    checkpoint_path = Path(checkpoint).expanduser()
+    if not checkpoint_path.is_file():
+        raise RuntimeError(
+            "NeuPAN MK-mini DUNE checkpoint does not exist: "
+            f"{checkpoint_path}. Update pan.dune_checkpoint in {config_path}."
         )
 
     return [
