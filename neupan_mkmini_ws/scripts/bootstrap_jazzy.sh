@@ -21,13 +21,24 @@ sudo apt-get install -y \
   ros-jazzy-pointcloud-to-laserscan \
   ros-jazzy-slam-toolbox
 
-if [[ ! -d src/neupan_ros2 || ! -d src/livox_ros_driver2 || ! -d src/FAST_LIO ]]; then
-  echo "Run: vcs import . < mkmini_neupan.repos" >&2
-  exit 1
-fi
+required_sources=(
+  "src/neupan_ros2"
+  "src/livox_ros_driver2"
+  "src/FAST_LIO"
+  "third_party/NeuPAN"
+)
+
+for source_dir in "${required_sources[@]}"; do
+  if [[ ! -d "${source_dir}" ]]; then
+    echo "Missing ${source_dir}" >&2
+    echo "Run: bash scripts/import_upstreams.sh /path/to/ROS2_MK-mini/src" >&2
+    exit 1
+  fi
+done
 
 if [[ ! -d src/yhs_can_control || ! -d src/yhs_can_interfaces ]]; then
   echo "Copy yhs_can_control and yhs_can_interfaces into src/ before building." >&2
+  echo "Run: bash scripts/import_upstreams.sh /path/to/ROS2_MK-mini/src" >&2
   exit 1
 fi
 

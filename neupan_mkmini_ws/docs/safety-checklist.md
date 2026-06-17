@@ -10,6 +10,9 @@
 - [ ] 确认 `/ctrl_cmd` 只有一个发布者。
 - [ ] 确认厂商 `cmd_vel_to_ctrl_cmd_node` 未运行。
 - [ ] 确认 `/veh_diag_fb` 持续更新，安全桥使用该话题判断整车诊断新鲜度。
+- [ ] 确认 `/livox/lidar` 约 `10 Hz` 更新，且类型为 `livox_ros_driver2/msg/CustomMsg`。
+- [ ] 确认 `/livox/points` 只有一个有效发布者；需要 `/scan` 时由 `start_scan_pipeline:=true` 管理。
+- [ ] 确认 `/scan` 和 `/plan` 在启动 NeuPAN 前均已稳定发布。
 - [ ] 架空轮状态下通过反馈确认 `D=4`、`R=2`。
 - [ ] 确认 TF 中只有一个 `odom -> base_link` 发布者。
 - [ ] 进入 CAN 命令模式前，确认安全桥仍处于未解锁状态。
@@ -36,6 +39,9 @@
 
 ## NeuPAN 启动前附加检查
 
+- [ ] `neupan_ros2`、`FAST_LIO`、`livox_ros_driver2` 和 `third_party/NeuPAN` 已通过 `scripts/import_upstreams.sh` 导入并构建。
+- [ ] `/scan` 达到预期频率，且来自当前唯一的 `/livox/points` 转换链路。
+- [ ] `/plan` 由 Nav2 planner 正常发布。
 - [ ] `/neupan_cmd_vel` 与 `/neupan/ackermann_cmd` 均达到 10 Hz 以上。
 - [ ] `/veh_diag_fb` 持续更新，且诊断状态无故障、急停和 EPS 故障。
 - [ ] `neupan_mkmini.yaml` 已替换为训练好的 MK-mini DUNE checkpoint。

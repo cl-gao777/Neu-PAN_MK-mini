@@ -5,7 +5,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -25,12 +25,19 @@ def _include(package_name, launch_file, condition=None, launch_arguments=None):
 
 def generate_launch_description():
     start_mid360 = LaunchConfiguration("start_mid360")
+    start_visualization_cloud = LaunchConfiguration("start_visualization_cloud")
+    start_scan_pipeline = LaunchConfiguration("start_scan_pipeline")
     start_neupan = LaunchConfiguration("start_neupan")
     neupan_config = LaunchConfiguration("neupan_config")
+    visualization_cloud_condition = IfCondition(
+        PythonExpression([start_visualization_cloud, " or ", start_scan_pipeline])
+    )
 
     return LaunchDescription(
         [
             DeclareLaunchArgument("start_mid360", default_value="false"),
+            DeclareLaunchArgument("start_visualization_cloud", default_value="false"),
+            DeclareLaunchArgument("start_scan_pipeline", default_value="false"),
             DeclareLaunchArgument("start_neupan", default_value="false"),
             DeclareLaunchArgument("neupan_config", default_value=""),
             _include(
@@ -42,6 +49,7 @@ def generate_launch_description():
                 package="mkmini_neupan_bringup",
                 executable="custom_msg_to_pointcloud2",
                 name="custom_msg_to_pointcloud2",
+                condition=visualization_cloud_condition,
                 output="screen",
                 parameters=[
                     {
@@ -51,7 +59,11 @@ def generate_launch_description():
                     }
                 ],
             ),
-            _include("mkmini_neupan_bringup", "perception_slam.launch.py"),
+            _include(
+                "mkmini_neupan_bringup",
+                "perception_slam.launch.py",
+                condition=IfCondition(start_scan_pipeline),
+            ),
             _include("mkmini_neupan_bringup", "navigation.launch.py"),
             _include(
                 "mkmini_neupan_bringup",

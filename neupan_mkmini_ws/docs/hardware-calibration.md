@@ -9,6 +9,11 @@
 
 完成实测并在 RViz 中验证该变换前，禁止进行 SLAM 或障碍净空测试。
 
+`mid360_livox_config.json` 中的零 `extrinsic_parameter` 只作为 Livox driver 占位值，
+不代表机器人已经完成实测外参。真机运行时，LiDAR/IMU 外参和
+`base_link -> livox_frame` 应写入 FAST-LIO 配置或由 TF 发布。除非物理测量证明零外参成立，
+否则不得把零外参用于闭环导航。
+
 ## TF 发布权
 
 完整集成栈优先使用 FAST-LIO2 作为 `odom -> base_link` 发布者。FAST-LIO2 稳定后，
@@ -31,6 +36,10 @@
 
 在点云上叠加显示 `/scan`。逐步调整高度范围，在保留腿部、箱体和低矮障碍物的同时，
 排除地面回波和高处物体。
+
+调参时应确认 `/livox/points` 只有一个有效发布者。若 `full_stack.launch.py`
+以 `start_scan_pipeline:=true` 启动，则它会自动启动 `/livox/lidar -> /livox/points`
+转换旁路，不应再让 `fast_lio_mid360.launch.py start_visualization_cloud:=true` 同时发布。
 
 ## DUNE 几何准入条件
 

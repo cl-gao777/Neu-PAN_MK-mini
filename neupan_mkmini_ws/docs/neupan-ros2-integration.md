@@ -16,6 +16,15 @@
 
 ## 上游必需配置
 
+Thor 上启动 NeuPAN 前，应先导入并构建上游源码：
+
+```bash
+cd ~/neupan_mkmini_ws
+bash scripts/import_upstreams.sh /path/to/ROS2_MK-mini/src
+bash scripts/bootstrap_jazzy.sh
+source install/setup.bash
+```
+
 为 MK-mini 配置 `neupan_ros2`：
 
 - kinematics：`acker`
@@ -38,10 +47,31 @@
 NeuPAN 实车闭环复现。训练参数以 MK-mini 实车几何为准：`wheelbase=0.6`、
 `length=0.84-0.90`、`width=0.60`。
 
+checkpoint 必须使用 Thor 运行时可见的绝对路径，例如：
+
+```yaml
+pan:
+  dune_checkpoint: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
+```
+
+NeuPAN 不直接消费 MID-360 点云。它需要 `/scan` `sensor_msgs/LaserScan` 和 `/plan`
+`nav_msgs/Path`：
+
+```text
+/livox/lidar -> /livox/points -> /scan -> NeuPAN
+Nav2 planner_server -> /plan -> NeuPAN
+```
+
+因此使用 MID-360 障碍物输入时，应打开 `full_stack.launch.py start_scan_pipeline:=true`。
+若 FAST-LIO 已在独立终端启动 MID-360 driver，`full_stack.launch.py` 中应保持
+`start_mid360:=false`，避免重复占用雷达 UDP 端口。
+
 完成训练并替换 checkpoint 后，可显式启动 NeuPAN：
 
 ```bash
-ros2 launch mkmini_neupan_bringup full_stack.launch.py start_neupan:=true
+ros2 launch mkmini_neupan_bringup full_stack.launch.py \
+  start_scan_pipeline:=true \
+  start_neupan:=true
 ```
 
 若 `neupan_ros2` 未通过 `mkmini_neupan.repos` 导入并构建，或 checkpoint 仍是占位符，

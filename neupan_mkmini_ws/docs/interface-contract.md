@@ -29,6 +29,11 @@
 兼容适配器会立即将其转换为 `AckermannDriveStamped`；其他节点不得将该话题当作普通
 `cmd_vel` 使用。
 
+`/livox/points` 只用于 RViz 显示和 `/scan` 转换旁路。FAST-LIO2 仍订阅
+`/livox/lidar` 的 `livox_ros_driver2/msg/CustomMsg`，不得为了显示点云而把 FAST-LIO2
+主输入改成 PointCloud2。`full_stack.launch.py start_scan_pipeline:=true` 会自动启动
+`custom_msg_to_pointcloud2`，因此同一时间只能保留一个有效的 `/livox/points` 发布者。
+
 安全桥使用 `/veh_diag_fb` 判断整车诊断帧是否健康且新鲜。`/chassis_info_fb` 仍是聚合底盘反馈，
 但任意反馈帧都会刷新该聚合消息，不能作为诊断帧新鲜度来源。
 

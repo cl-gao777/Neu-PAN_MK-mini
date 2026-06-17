@@ -44,21 +44,25 @@ class CustomMsgToPointCloud2Test(unittest.TestCase):
             ),
         )
 
-    def test_full_stack_launch_starts_custom_msg_converter_before_scan_pipeline(self):
+    def test_full_stack_launch_gates_visualization_and_scan_pipeline_separately(self):
         launch_file = (PACKAGE_ROOT / "launch" / "full_stack.launch.py").read_text(
             encoding="utf-8"
         )
 
         self.assertIn('DeclareLaunchArgument("start_mid360", default_value="false")', launch_file)
+        self.assertIn('DeclareLaunchArgument("start_visualization_cloud", default_value="false")', launch_file)
+        self.assertIn('DeclareLaunchArgument("start_scan_pipeline", default_value="false")', launch_file)
         self.assertIn('"mid360_driver.launch.py"', launch_file)
         self.assertIn("IfCondition(start_mid360)", launch_file)
         self.assertIn('executable="custom_msg_to_pointcloud2"', launch_file)
+        self.assertIn("visualization_cloud_condition", launch_file)
+        self.assertIn("PythonExpression([start_visualization_cloud", launch_file)
+        self.assertIn('" or "', launch_file)
+        self.assertIn("start_scan_pipeline])", launch_file)
         self.assertIn('"input_topic": "/livox/lidar"', launch_file)
         self.assertIn('"output_topic": "/livox/points"', launch_file)
-        self.assertLess(
-            launch_file.index('executable="custom_msg_to_pointcloud2"'),
-            launch_file.index('"perception_slam.launch.py"'),
-        )
+        self.assertIn('"perception_slam.launch.py"', launch_file)
+        self.assertIn("IfCondition(start_scan_pipeline)", launch_file)
 
     def test_scan_pipeline_defaults_to_converted_pointcloud2_topic(self):
         launch_file = (
@@ -94,10 +98,7 @@ class CustomMsgToPointCloud2Test(unittest.TestCase):
         self.assertEqual(host_net_info["push_msg_port"], 56201)
         self.assertEqual(config["lidar_configs"][0]["ip"], "192.168.1.3")
         self.assertEqual(config["lidar_configs"][0]["pcl_data_type"], 1)
-        self.assertEqual(
-            config["lidar_configs"][0]["extrinsic_parameter"],
-            {"roll": 0.0, "pitch": 0.0, "yaw": 0.0, "x": 0, "y": 0, "z": 0},
-        )
+        self.assertIn("extrinsic_parameter", config["lidar_configs"][0])
 
     def test_mid360_driver_launch_uses_custom_msg_route(self):
         launch_file = (PACKAGE_ROOT / "launch" / "mid360_driver.launch.py").read_text(
@@ -111,6 +112,46 @@ class CustomMsgToPointCloud2Test(unittest.TestCase):
         self.assertIn('DeclareLaunchArgument("frame_id", default_value="livox_frame")', launch_file)
         self.assertIn('DeclareLaunchArgument("publish_freq", default_value="10.0")', launch_file)
         self.assertIn('"user_config_path": config_path', launch_file)
+
+    def test_fast_lio_mid360_launch_keeps_custom_msg_for_mapping_and_points_for_rviz(self):
+        launch_file = (
+            PACKAGE_ROOT / "launch" / "fast_lio_mid360.launch.py"
+        ).read_text(encoding="utf-8")
+        fast_lio_config = (
+            PACKAGE_ROOT / "config" / "fast_lio_mid360.yaml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('DeclareLaunchArgument("start_fast_lio", default_value="true")', launch_file)
+        self.assertIn('DeclareLaunchArgument("start_visualization_cloud", default_value="true")', launch_file)
+        self.assertIn('DeclareLaunchArgument("start_rviz", default_value="false")', launch_file)
+        self.assertIn('"mapping.launch.py"', launch_file)
+        self.assertIn('"config_file": fast_lio_config_file', launch_file)
+        self.assertIn("IfCondition(start_visualization_cloud)", launch_file)
+        self.assertIn('"input_topic": "/livox/lidar"', launch_file)
+        self.assertIn('"output_topic": "/livox/points"', launch_file)
+        self.assertNotIn("pointcloud_to_laserscan", launch_file)
+        self.assertIn('lid_topic: "/livox/lidar"', fast_lio_config)
+        self.assertIn('imu_topic: "/livox/imu"', fast_lio_config)
+        self.assertIn("scan_rate: 10", fast_lio_config)
+        self.assertIn("extrinsic_est_en: true", fast_lio_config)
+
+    def test_mid360_rviz_launch_uses_runtime_copy_of_template(self):
+        launch_file = (
+            PACKAGE_ROOT / "launch" / "mid360_rviz.launch.py"
+        ).read_text(encoding="utf-8")
+        setup_py = (PACKAGE_ROOT / "setup.py").read_text(encoding="utf-8")
+        rviz_template = (
+            PACKAGE_ROOT / "rviz" / "mid360_fast_lio.rviz"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("shutil.copyfile", launch_file)
+        self.assertIn("tempfile.gettempdir", launch_file)
+        self.assertIn('"mkmini_mid360_fast_lio.rviz"', launch_file)
+        self.assertIn('executable="rviz2"', launch_file)
+        self.assertIn('glob("rviz/*.rviz")', setup_py)
+        self.assertIn("Fixed Frame=livox_frame", rviz_template)
+        self.assertIn("Topic=/livox/points", rviz_template)
+        self.assertIn("Class: rviz_default_plugins/PointCloud2", rviz_template)
 
     def test_readme_documents_pytest_and_mid360_launch_commands(self):
         readme = (PACKAGE_ROOT.parents[1] / "README.md").read_text(encoding="utf-8")

@@ -14,7 +14,8 @@
 ## 传感器、定位与导航
 
 - [livox_ros_driver2](https://github.com/Livox-SDK/livox_ros_driver2)：Mid-360 ROS2
-  驱动。进行二维激光投影时需配置 PointCloud2 输出。
+  驱动。本项目保持 `/livox/lidar` 为 CustomMsg 供 FAST-LIO 使用；RViz 显示和二维激光投影所需的
+  PointCloud2 由本仓库的 `custom_msg_to_pointcloud2` 旁路提供。
 - [FAST_LIO ROS2](https://github.com/hku-mars/FAST_LIO/tree/ROS2)：主要里程计来源。
 - [SLAM Toolbox](https://github.com/SteveMacenski/slam_toolbox)：在线二维占据地图
   和 `map -> odom`。

@@ -224,6 +224,32 @@ class WorkspaceContractTest(unittest.TestCase):
         self.assertIn("REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT", script)
         self.assertIn("Train MK-mini DUNE", script)
 
+    def test_import_upstreams_script_imports_all_required_sources(self):
+        script = (WORKSPACE_ROOT / "scripts" / "import_upstreams.sh").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("vcs import . < mkmini_neupan.repos", script)
+        self.assertIn("bash scripts/freeze_revisions.sh", script)
+        self.assertIn("src/neupan_ros2", script)
+        self.assertIn("src/livox_ros_driver2", script)
+        self.assertIn("src/FAST_LIO", script)
+        self.assertIn("third_party/NeuPAN", script)
+        self.assertIn("MKMINI_VENDOR_SRC", script)
+        self.assertIn("src/yhs_can_control", script)
+        self.assertIn("src/yhs_can_interfaces", script)
+
+    def test_bootstrap_requires_imported_neupan_sources_before_build(self):
+        script = (WORKSPACE_ROOT / "scripts" / "bootstrap_jazzy.sh").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("src/neupan_ros2", script)
+        self.assertIn("src/livox_ros_driver2", script)
+        self.assertIn("src/FAST_LIO", script)
+        self.assertIn("third_party/NeuPAN", script)
+        self.assertIn("bash scripts/import_upstreams.sh /path/to/ROS2_MK-mini/src", script)
+
 
 if __name__ == "__main__":
     unittest.main()

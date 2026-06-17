@@ -31,8 +31,11 @@
 
 - 每轮测试的 rosbag。
 - 每轮测试对应的 CSV 结果行。
+- `/livox/lidar`、`/livox/points`、`/scan` 和 `/plan` 的话题频率。
 - NeuPAN 输出频率。
+- `/neupan_cmd_vel` 与 `/neupan/ackermann_cmd` 的话题频率。
 - `/veh_diag_fb` 诊断反馈频率和安全桥状态。
+- `/livox/points` 发布者数量，确认没有重复点云旁路。
 - 最小观测净空。
 - 最终目标误差。
 - 失败原因与恢复操作。
