@@ -8,14 +8,14 @@ Ubuntu 24.04 + ROS 2 Jazzy。
 在 Thor 上请使用原生 Linux 文件系统，例如：
 
 ```bash
-mkdir -p ~/ROS2_MK-mini/src
-cd ~/ROS2_MK-mini
+mkdir -p ~/workspaces/MK-mini_ws/ROS2_MK-mini/src
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 ```
 
 复制或克隆 SDK 后，目录结构应为：
 
 ```text
-~/ROS2_MK-mini/
+~/workspaces/MK-mini_ws/ROS2_MK-mini/
   src/
     yhs_can_control/
     yhs_can_interfaces/
@@ -46,7 +46,7 @@ rosdep install --from-paths src --ignore-src -r -y
 在工作区根目录执行构建：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
@@ -83,7 +83,7 @@ candump can4
 同时启动 CAN 桥接节点和 Nav2 `/cmd_vel` 适配节点：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ros2 launch yhs_can_control yhs_can_control.launch.py
@@ -106,7 +106,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py params_file:=/path/to/cfg.
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source ~/ROS2_MK-mini/install/setup.bash
+source ~/workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash
 ros2 topic list
 ros2 topic echo /chassis_info_fb
 ros2 topic echo /veh_diag_fb

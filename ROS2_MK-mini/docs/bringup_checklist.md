@@ -47,7 +47,7 @@ candump can4
 构建：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
@@ -72,7 +72,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source ~/ROS2_MK-mini/install/setup.bash
+source ~/workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash
 ros2 topic list
 ```
 

@@ -98,7 +98,7 @@ bash scripts/start_real_robot_neupan.sh
 
 每次真机运行前必须按这个顺序走：
 
-1. 配置并确认训练好的 MK-mini DUNE checkpoint，不允许保留占位符。
+1. 确认已配置的 MK-mini DUNE checkpoint 文件存在、匹配实车几何，并已通过实车安全验证。
 2. 运行 `bash docker/start_real_robot_neupan.sh --dry-run`，确认 workspace、镜像、CAN、LiDAR 和 launch 参数符合现场配置。
 3. 运行 Thor preflight，并确认最终输出 `RESULT  PASS`。
 4. 人工确认遥控接管、物理急停、独立安全员和测试区域隔离。
@@ -126,14 +126,14 @@ bash scripts/start_real_robot_neupan.sh
 | 容器内直接跑 preflight | `ros2 run mkmini_neupan_bringup thor_neupan_preflight` |
 | 手动启动 NeuPAN full stack | `ros2 launch mkmini_neupan_bringup full_stack.launch.py start_neupan:=true` |
 | 本地纯 Python 测试 | `cd neupan_mkmini_ws && .venv\Scripts\python.exe -m pytest` |
-| 容器内测试合集 | `bash docker/scripts/run_tests.sh` |
+| 容器内测试合集 | `bash /workspaces/MK-mini_ws/docker/scripts/run_tests.sh` |
 
 ## 手动开发路径
 
 底盘 SDK 构建：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 rosdep install --from-paths src --ignore-src -r -y
 colcon build --symlink-install
@@ -142,8 +142,8 @@ colcon build --symlink-install
 NeuPAN workspace 初始化和构建：
 
 ```bash
-cd ~/neupan_mkmini_ws
-bash scripts/import_upstreams.sh /path/to/ROS2_MK-mini/src
+cd ~/workspaces/MK-mini_ws/neupan_mkmini_ws
+bash scripts/import_upstreams.sh ~/workspaces/MK-mini_ws/ROS2_MK-mini/src
 bash scripts/bootstrap_jazzy.sh
 source install/setup.bash
 ```

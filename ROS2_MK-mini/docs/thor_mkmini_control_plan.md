@@ -39,13 +39,13 @@
 在 Thor 上使用原生 Linux 工作区，例如：
 
 ```bash
-mkdir -p ~/ROS2_MK-mini
+mkdir -p ~/workspaces/MK-mini_ws/ROS2_MK-mini
 ```
 
 将项目内容复制到 Thor 后，推荐结构为：
 
 ```text
-~/ROS2_MK-mini/
+~/workspaces/MK-mini_ws/ROS2_MK-mini/
   src/
     yhs_can_control/
     yhs_can_interfaces/
@@ -58,7 +58,7 @@ mkdir -p ~/ROS2_MK-mini
 Thor 上删除：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 rm -rf build install log
 ```
 
@@ -67,7 +67,7 @@ rm -rf build install log
 在 Thor 上执行：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 sudo apt update
 sudo apt install -y python3-colcon-common-extensions python3-rosdep can-utils
@@ -81,7 +81,7 @@ source install/setup.bash
 完整终端日志，再检查：
 
 - 是否正确 `source /opt/ros/jazzy/setup.bash`。
-- 是否在 `~/ROS2_MK-mini` 工作区根目录执行。
+- 是否在 `~/workspaces/MK-mini_ws/ROS2_MK-mini` 工作区根目录执行。
 - `src/yhs_can_control` 和 `src/yhs_can_interfaces` 是否存在。
 - `rosdep install` 是否成功安装依赖。
 
@@ -126,7 +126,7 @@ candump can4
 终端 1 启动驱动：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ros2 launch yhs_can_control yhs_can_control.launch.py
@@ -146,7 +146,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source ~/ROS2_MK-mini/install/setup.bash
+source ~/workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash
 ros2 topic list
 ```
 

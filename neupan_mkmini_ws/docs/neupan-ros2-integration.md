@@ -19,8 +19,8 @@
 Thor 上启动 NeuPAN 前，应先导入并构建上游源码：
 
 ```bash
-cd ~/neupan_mkmini_ws
-bash scripts/import_upstreams.sh /path/to/ROS2_MK-mini/src
+cd ~/workspaces/MK-mini_ws/neupan_mkmini_ws
+bash scripts/import_upstreams.sh ~/workspaces/MK-mini_ws/ROS2_MK-mini/src
 bash scripts/bootstrap_jazzy.sh
 source install/setup.bash
 ```
@@ -44,11 +44,11 @@ source install/setup.bash
 NeuPAN 安全桥把非零前进命令提升到最低可响应速度 `0.5 m/s`，并在 `0.6 m/s`
 硬限幅；底盘 SDK 自带 `/cmd_vel` 适配器使用相同上限。NeuPAN 控制期间不能绕过安全桥。
 
-当前仓库不会假设已经有 MK-mini 专用 DUNE checkpoint。未完成训练前，只能验证
+当前仓库已包含并配置 DUNE checkpoint。该文件可用于启动和联调，但在确认模型匹配
+MK-mini 实车几何并通过实车安全验证前，只能验证
 `/neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd` 的桥接和安全逻辑，以及
-`/veh_diag_fb` 诊断新鲜度门控，不能进行
-NeuPAN 实车闭环复现。训练参数以 MK-mini 实车几何为准：`wheelbase=0.6`、
-`length=0.84-0.90`、`width=0.60`。
+`/veh_diag_fb` 诊断新鲜度门控，不能进行 NeuPAN 实车闭环复现。模型几何应以
+MK-mini 实车为准：`wheelbase=0.6`、`length=0.84-0.90`、`width=0.60`。
 
 checkpoint 必须使用 Thor 运行时可见的绝对路径，例如：
 
@@ -56,7 +56,7 @@ checkpoint 必须使用 Thor 运行时可见的绝对路径，例如：
 neupan_node:
   ros__parameters:
     planner_config_file: planner.yaml
-    dune_checkpoint_file: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
+    dune_checkpoint_file: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoint/dune/model_5000.pth
 ```
 
 NeuPAN 不直接消费 MID-360 点云。它需要 `/scan` `sensor_msgs/LaserScan` 和 `/plan`
@@ -71,7 +71,7 @@ Nav2 planner_server -> /plan -> NeuPAN
 若 FAST-LIO 已在独立终端启动 MID-360 driver，`full_stack.launch.py` 中应保持
 `start_mid360:=false`，避免重复占用雷达 UDP 端口。
 
-完成训练并替换 checkpoint 后，可显式启动 NeuPAN：
+确认 checkpoint 匹配 MK-mini 几何并通过实车安全验证后，可显式启动 NeuPAN：
 
 ```bash
 ros2 launch mkmini_neupan_bringup full_stack.launch.py \

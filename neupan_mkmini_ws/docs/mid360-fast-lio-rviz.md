@@ -33,7 +33,7 @@ ping 192.168.1.3
 在 Thor ROS2 Jazzy 环境中：
 
 ```bash
-cd ~/neupan_mkmini_ws
+cd ~/workspaces/MK-mini_ws/neupan_mkmini_ws
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 

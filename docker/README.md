@@ -42,8 +42,10 @@ candump can4           # 确认底盘有 CAN 帧输出
 **LiDAR 网络：**
 
 ```bash
-# 确保 Thor 网口 IP 为 192.168.1.50/24（与 mid360_livox_config.json 一致）
-sudo ip addr add 192.168.1.50/24 dev eth0
+# 先查询实际接口；enP2p1s0 仅为当前部署示例
+ip -br addr
+LIDAR_IFACE=enP2p1s0
+sudo ip addr replace 192.168.1.50/24 dev "${LIDAR_IFACE}"
 ```
 
 > 如果 Thor 实际网口不是 `192.168.1.50/24`，需：1) 先改 Thor 网口 2) 再改仓库中的 `mid360_livox_config.json`。
@@ -178,8 +180,8 @@ MKMINI_IMAGE=mkmini-jazzy:dev \
 CAN_IFACE=can4 \
 LIDAR_HOST_CIDR=192.168.1.50/24 \
 bash docker/start_real_robot_neupan.sh \
-  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/robots/site/robot.yaml \
-  fast_lio_tf_config:=/workspaces/MK-mini_ws/neupan_mkmini_ws/config/fast_lio_tf_site.yaml \
+  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/src/mkmini_neupan_bringup/config/robots/mkmini/robot.yaml \
+  fast_lio_tf_config:=/workspaces/MK-mini_ws/neupan_mkmini_ws/src/mkmini_neupan_bringup/config/fast_lio_tf.yaml \
   start_mid360:=true \
   start_scan_pipeline:=true
 ```
@@ -194,8 +196,8 @@ bash docker/start_real_robot_neupan.sh \
 
 | 裸机文档中的路径 | 容器内等效路径 |
 |---|---|
-| `~/ROS2_MK-mini` | `/workspaces/MK-mini_ws/ROS2_MK-mini` |
-| `~/neupan_mkmini_ws` | `/workspaces/MK-mini_ws/neupan_mkmini_ws` |
+| `~/workspaces/MK-mini_ws/ROS2_MK-mini` | `/workspaces/MK-mini_ws/ROS2_MK-mini` |
+| `~/workspaces/MK-mini_ws/neupan_mkmini_ws` | `/workspaces/MK-mini_ws/neupan_mkmini_ws` |
 | `/tmp/mkmini_odom_test.csv` | `/tmp/mkmini_odom_test.csv` 或挂载路径 |
 
 ---
@@ -205,7 +207,7 @@ bash docker/start_real_robot_neupan.sh \
 对标文档：`quick_start.md`、`odom_accuracy_test_plan.md`、`bringup_checklist.md`、`thor_mkmini_control_plan.md`
 
 ```bash
-bash docker/scripts/build_chassis_sdk.sh
+bash /workspaces/MK-mini_ws/docker/scripts/build_chassis_sdk.sh
 ```
 
 等效于：
@@ -223,8 +225,8 @@ colcon build --symlink-install --packages-select yhs_can_interfaces yhs_can_cont
 **检查 CAN 总线：**
 
 ```bash
-bash docker/scripts/check_can.sh       # 状态检查
-bash docker/scripts/check_can.sh 5     # 状态检查 + 抓取 5 秒 CAN 帧
+bash /workspaces/MK-mini_ws/docker/scripts/check_can.sh       # 状态检查
+bash /workspaces/MK-mini_ws/docker/scripts/check_can.sh 5     # 状态检查 + 抓取 5 秒 CAN 帧
 ```
 
 **启动底盘驱动：**
@@ -253,10 +255,10 @@ ros2 run tf2_ros tf2_echo odom base_link
 **发指令测试运动：**
 
 ```bash
-bash docker/scripts/send_cmd_vel.sh forward       # 前进 0.5 m/s
-bash docker/scripts/send_cmd_vel.sh forward 0.5    # 前进 0.5 m/s
-bash docker/scripts/send_cmd_vel.sh turn           # 轻微转向
-bash docker/scripts/send_cmd_vel.sh stop           # 停车
+bash /workspaces/MK-mini_ws/docker/scripts/send_cmd_vel.sh forward       # 前进 0.5 m/s
+bash /workspaces/MK-mini_ws/docker/scripts/send_cmd_vel.sh forward 0.5    # 前进 0.5 m/s
+bash /workspaces/MK-mini_ws/docker/scripts/send_cmd_vel.sh turn           # 轻微转向
+bash /workspaces/MK-mini_ws/docker/scripts/send_cmd_vel.sh stop           # 停车
 ```
 
 > ⚠️ 首次运动测试必须架空驱动轮或在受控测试区域进行。
@@ -271,10 +273,10 @@ bash docker/scripts/send_cmd_vel.sh stop           # 停车
 
 ```bash
 # 1.0 m 低速测试
-bash docker/scripts/run_odom_test.sh --distance 1.0 --speed 0.5
+bash /workspaces/MK-mini_ws/docker/scripts/run_odom_test.sh --distance 1.0 --speed 0.5
 
 # 2.0 m 测试，输出到挂载目录
-bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.5 \
+bash /workspaces/MK-mini_ws/docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.5 \
     --csv /workspaces/MK-mini_ws/odom_results.csv
 ```
 
@@ -305,10 +307,10 @@ bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.5 \
 
 ```bash
 # CAN 检查
-bash docker/scripts/check_can.sh 3
+bash /workspaces/MK-mini_ws/docker/scripts/check_can.sh 3
 
 # 构建
-bash docker/scripts/build_chassis_sdk.sh
+bash /workspaces/MK-mini_ws/docker/scripts/build_chassis_sdk.sh
 
 # 启动驱动
 source /opt/ros/jazzy/setup.bash
@@ -320,7 +322,7 @@ ros2 topic list | grep -E 'ctrl_cmd|chassis_info_fb|veh_diag_fb|odom|cmd_vel'
 ros2 run tf2_ros tf2_echo odom base_link
 
 # 架空轮测试
-bash docker/scripts/run_odom_test.sh --distance 0.5 --speed 0.5
+bash /workspaces/MK-mini_ws/docker/scripts/run_odom_test.sh --distance 0.5 --speed 0.5
 ```
 
 ---
@@ -367,7 +369,7 @@ bash scripts/freeze_revisions.sh
 **构建全栈：**
 
 ```bash
-bash docker/scripts/build_neupan_full.sh
+bash /workspaces/MK-mini_ws/docker/scripts/build_neupan_full.sh
 ```
 
 **启动全栈：**
@@ -392,13 +394,13 @@ bash scripts/record_acceptance_run.sh <run_name>
 
 ```bash
 # 全部测试
-bash docker/scripts/run_tests.sh
+bash /workspaces/MK-mini_ws/docker/scripts/run_tests.sh
 
 # 仅底盘 C++ 测试（colcon test）
-bash docker/scripts/run_tests.sh --chassis-only
+bash /workspaces/MK-mini_ws/docker/scripts/run_tests.sh --chassis-only
 
 # 仅安全桥 Python 测试（pytest）
-bash docker/scripts/run_tests.sh --bridge-only
+bash /workspaces/MK-mini_ws/docker/scripts/run_tests.sh --bridge-only
 ```
 
 单元测试无需连接任何硬件即可运行。
@@ -408,17 +410,17 @@ bash docker/scripts/run_tests.sh --bridge-only
 | 操作 | 在哪里执行 | 命令 |
 |---|---|---|
 | CAN 接口配置 | **宿主机** | `sudo ip link set can4 up type can bitrate 500000` |
-| LiDAR 网络配置 | **宿主机** | `sudo ip addr add 192.168.1.50/24 dev eth0` |
+| LiDAR 网络配置 | **宿主机** | 先用 `ip -br addr` 查询接口，再执行 `sudo ip addr replace 192.168.1.50/24 dev "${LIDAR_IFACE}"` |
 | 构建 Docker 镜像 | **宿主机** | `cd docker && docker build -t mkmini-jazzy:dev .` |
 | 启动容器 | **宿主机** | `bash docker/run_mkmini_dev.sh` |
-| CAN 诊断 | 容器内 | `bash docker/scripts/check_can.sh 5` |
-| SDK 构建 | 容器内 | `bash docker/scripts/build_chassis_sdk.sh` |
+| CAN 诊断 | 容器内 | `bash /workspaces/MK-mini_ws/docker/scripts/check_can.sh 5` |
+| SDK 构建 | 容器内 | `bash /workspaces/MK-mini_ws/docker/scripts/build_chassis_sdk.sh` |
 | ROS 2 启动 | 容器内 | `ros2 launch ...` |
-| 手动运动指令 | 容器内 | `bash docker/scripts/send_cmd_vel.sh forward` |
-| 里程计测试 | 容器内 | `bash docker/scripts/run_odom_test.sh --distance 1.0` |
-| 单元测试 | 容器内 | `bash docker/scripts/run_tests.sh` |
+| 手动运动指令 | 容器内 | `bash /workspaces/MK-mini_ws/docker/scripts/send_cmd_vel.sh forward` |
+| 里程计测试 | 容器内 | `bash /workspaces/MK-mini_ws/docker/scripts/run_odom_test.sh --distance 1.0` |
+| 单元测试 | 容器内 | `bash /workspaces/MK-mini_ws/docker/scripts/run_tests.sh` |
 | NeuPAN 初始化 | 容器内 | `vcs import ...`（参见 4.6） |
-| NeuPAN 全栈构建 | 容器内 | `bash docker/scripts/build_neupan_full.sh` |
+| NeuPAN 全栈构建 | 容器内 | `bash /workspaces/MK-mini_ws/docker/scripts/build_neupan_full.sh` |
 | rosbag 录制 | 容器内 | `bash scripts/record_acceptance_run.sh` |
 
 ## 6. 常见问题排查
@@ -427,7 +429,7 @@ bash docker/scripts/run_tests.sh --bridge-only
 |---|---|---|
 | `can4: No such device` | CAN 未在宿主机配置 | 在 Thor 宿主机上执行 `sudo ip link set can4 up type can bitrate 500000`，确认 `ip link show can4` 存在且 UP |
 | `candump can4` 无数据 | 底盘未上电/急停/CAN 接线 | 检查底盘电源、急停状态、CAN 适配器连接，在宿主机上排查 |
-| 无法连接 Livox LiDAR | 网口 IP 不是 `192.168.1.50/24` | 宿主机上：`sudo ip addr add 192.168.1.50/24 dev eth0` |
+| 无法连接 Livox LiDAR | 网口 IP 不是 `192.168.1.50/24` | 宿主机上先用 `ip -br addr` 查询接口，再设置 `LIDAR_IFACE` 并执行 `sudo ip addr replace 192.168.1.50/24 dev "${LIDAR_IFACE}"` |
 | `colcon build` 失败 | 跨架构残留或依赖缺失 | `rm -rf build install log` 后重试 |
 | `rosdep: command not found` | rosdep 未初始化 | 容器内手动执行 `rosdep init && rosdep update` |
 | DDS 节点互相不可见 | 防火墙或 ROS_DOMAIN_ID 不一致 | Thor 宿主机可能需要 `sudo ufw disable`。确认所有终端使用相同 ROS_DOMAIN_ID |
