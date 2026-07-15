@@ -48,6 +48,7 @@ CanControl::CanControl(rclcpp::Node::SharedPtr node)
   // 参数从 cfg.yaml 读取；没有配置时使用保守默认值。
   if_name_ = declare_and_get<std::string>(node_, "can_name", "can4");
   wheel_base_ = declare_and_get<double>(node_, "wheel_base", 0.6);
+  use_odo_angular_ = declare_and_get<bool>(node_, "use_odo_angular", false);
   publish_odom_tf_ = declare_and_get<bool>(node_, "publish_odom_tf", true);
   odom_frame_id_ = declare_and_get<std::string>(node_, "odom_frame_id", "odom");
   base_frame_id_ = declare_and_get<std::string>(node_, "base_frame_id", "base_link");
@@ -283,13 +284,14 @@ void CanControl::can_data_recv_callback()
           msg.ctrl_fb_steering = static_cast<float>(feedback->steering_deg);
           msg.ctrl_fb_mode = feedback->mode;
           chassis_info_msg_.ctrl_fb = msg;
+          latest_steering_rad_ = feedback->steering_deg * kDegToRad;
           publish_chassis_info();
 
           // 如果底盘还没有发送 ODO 反馈，先用速度反馈做里程计积分，保证 /odom 有基础输出。
           if (!have_odo_feedback_) {
             const double signed_velocity = (feedback->gear == 2) ?
               -feedback->velocity_mps : feedback->velocity_mps;
-            publish_integrated_odom(signed_velocity, feedback->steering_deg * kDegToRad);
+            publish_integrated_odom(signed_velocity, latest_steering_rad_);
           }
           break;
         }
@@ -484,10 +486,13 @@ void CanControl::publish_integrated_odom(const double velocity_mps, const double
     return;
   }
 
-  const double angular_velocity = velocity_mps * std::tan(steering_rad) / wheel_base_;
-  x_ += velocity_mps * std::cos(theta_) * dt;
-  y_ += velocity_mps * std::sin(theta_) * dt;
-  theta_ += angular_velocity * dt;
+  const auto start_pose = mk_mini::odom::Pose2D{x_, y_, theta_};
+  const auto end_pose = mk_mini::odom::integrate_ackermann(
+    start_pose, velocity_mps * dt, steering_rad, wheel_base_);
+  const double angular_velocity = (end_pose.yaw - theta_) / dt;
+  x_ = end_pose.x;
+  y_ = end_pose.y;
+  theta_ = end_pose.yaw;
   last_odom_time_ = current_time;
 
   publish_odom_message(current_time, velocity_mps, angular_velocity);
@@ -504,15 +509,28 @@ void CanControl::publish_odo_feedback_odom(const mk_mini::OdoFeedback & feedback
     const double dt = (current_time - last_odom_time_).seconds();
     if (dt > 0.0) {
       const double delta_mileage = feedback.accumulative_mileage_m - last_odo_mileage_;
-      const double delta_heading = feedback.accumulative_angular_rad - last_odo_heading_;
+      double delta_heading = 0.0;
       linear_velocity = delta_mileage / dt;
+      if (use_odo_angular_) {
+        delta_heading = feedback.accumulative_angular_rad - last_odo_heading_;
+        theta_ = feedback.accumulative_angular_rad;
+        x_ += delta_mileage * std::cos(theta_);
+        y_ += delta_mileage * std::sin(theta_);
+      } else {
+        const auto start_pose = mk_mini::odom::Pose2D{x_, y_, theta_};
+        const auto end_pose = mk_mini::odom::integrate_ackermann(
+          start_pose, delta_mileage, latest_steering_rad_, wheel_base_);
+        delta_heading = end_pose.yaw - theta_;
+        x_ = end_pose.x;
+        y_ = end_pose.y;
+        theta_ = end_pose.yaw;
+      }
       angular_velocity = delta_heading / dt;
-      theta_ = feedback.accumulative_angular_rad;
-      x_ += delta_mileage * std::cos(theta_);
-      y_ += delta_mileage * std::sin(theta_);
     }
   } else {
-    theta_ = feedback.accumulative_angular_rad;
+    if (use_odo_angular_) {
+      theta_ = feedback.accumulative_angular_rad;
+    }
     have_odo_feedback_ = true;
   }
 

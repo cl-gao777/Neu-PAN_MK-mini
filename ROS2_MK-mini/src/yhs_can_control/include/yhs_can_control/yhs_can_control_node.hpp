@@ -26,6 +26,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
+#include "yhs_can_control/ackermann_odom.hpp"
 #include "yhs_can_control/control_command_gate.hpp"
 #include "yhs_can_control/mk_mini_protocol.hpp"
 #include "yhs_can_interfaces/msg/chassis_info_fb.hpp"
@@ -54,6 +55,7 @@ private:
   std::string if_name_;
   int can_socket_{-1};
   double wheel_base_{0.6};
+  bool use_odo_angular_{false};
   bool publish_odom_tf_{true};
   std::string odom_frame_id_{"odom"};
   std::string base_frame_id_{"base_link"};
@@ -81,6 +83,7 @@ private:
   bool have_odo_feedback_{false};
   double last_odo_mileage_{0.0};
   double last_odo_heading_{0.0};
+  double latest_steering_rad_{0.0};
 
   rclcpp::Subscription<yhs_can_interfaces::msg::IoCmd>::SharedPtr io_cmd_subscriber_;
   rclcpp::Subscription<yhs_can_interfaces::msg::CtrlCmd>::SharedPtr ctrl_cmd_subscriber_;

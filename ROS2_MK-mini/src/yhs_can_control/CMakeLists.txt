@@ -108,6 +108,10 @@ if(BUILD_TESTING)
   target_include_directories(test_odom_distance_test_logic PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
+  ament_add_gtest(test_ackermann_odom test/test_ackermann_odom.cpp)
+  target_include_directories(test_ackermann_odom PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+
   ament_add_gtest(test_control_command_gate test/test_control_command_gate.cpp)
   target_link_libraries(test_control_command_gate control_command_gate)
 endif()

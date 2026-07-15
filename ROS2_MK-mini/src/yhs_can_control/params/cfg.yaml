@@ -6,6 +6,9 @@ yhs_can_control_node:
     can_name: "can4"
     # 车辆轴距，单位 m；速度积分和 Ackermann 换算都会用到。
     wheel_base: 0.6
+    # 当前 MK-mini 固件的 ODO 累计角度恒为 0，因此默认用累计里程和实际转角积分航向。
+    # 只有确认底盘 odo_fb_accumulative_angular 有效时才改为 true。
+    use_odo_angular: false
     # 是否发布 odom -> base_link TF；如果外部定位也发布同名 TF，应关闭。
     publish_odom_tf: true
     odom_frame_id: "odom"
