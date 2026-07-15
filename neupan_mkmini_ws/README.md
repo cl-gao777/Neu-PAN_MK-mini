@@ -37,14 +37,14 @@ MID-360 /livox/lidar CustomMsg -> /livox/points PointCloud2 -> RViz 或 /scan
 在 Thor 上进入工作区后，先导入上游源码和厂商底盘包：
 
 ```bash
-cd ~/neupan_mkmini_ws
-bash scripts/import_upstreams.sh /path/to/ROS2_MK-mini/src
+cd ~/workspaces/MK-mini_ws/neupan_mkmini_ws
+bash scripts/import_upstreams.sh ~/workspaces/MK-mini_ws/ROS2_MK-mini/src
 ```
 
 `import_upstreams.sh` 会从 `mkmini_neupan.repos` 导入 `neupan_ros2`、`livox_ros_driver2`、`FAST_LIO`、`NeuPAN`、`ir-sim` 等源码，冻结精确版本，并把 MK-mini 厂商包 `yhs_can_control` 与 `yhs_can_interfaces` 复制到 `src/`。如果厂商包路径不方便作为参数传入，也可以先设置：
 
 ```bash
-export MKMINI_VENDOR_SRC=/path/to/ROS2_MK-mini/src
+export MKMINI_VENDOR_SRC=~/workspaces/MK-mini_ws/ROS2_MK-mini/src
 bash scripts/import_upstreams.sh
 ```
 
@@ -154,14 +154,16 @@ ros2 launch mkmini_neupan_bringup full_stack.launch.py start_mid360:=true
 
 NeuPAN 使用官方两层配置：`config/robots/mkmini/robot.yaml` 是 ROS 参数文件，`planner_config_file` 指向同目录 `planner.yaml`，`dune_checkpoint_file` 指向 Thor 可见的 checkpoint。任一文件不存在时 `neupan.launch.py` 会立即失败。
 
-推荐把 checkpoint 放在 Thor 可见的稳定路径，并在配置中使用绝对路径，例如：
+当前 checkpoint 位于 Thor 和容器均可见的稳定路径，`robot.yaml` 使用以下绝对路径：
 
 ```yaml
 neupan_node:
   ros__parameters:
     planner_config_file: planner.yaml
-    dune_checkpoint_file: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
+    dune_checkpoint_file: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoint/dune/model_5000.pth
 ```
+
+该模型仍必须确认匹配 MK-mini 实车几何，并通过实车安全验证后才能用于闭环运行；替换模型时应保持该路径，或同步更新 `robot.yaml`。
 
 真机上推荐使用宿主机一键入口：
 
@@ -184,8 +186,8 @@ bash scripts/start_real_robot_neupan.sh
 
 ```bash
 bash docker/start_real_robot_neupan.sh \
-  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/robots/site/robot.yaml \
-  fast_lio_tf_config:=/workspaces/MK-mini_ws/neupan_mkmini_ws/config/fast_lio_tf_site.yaml \
+  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/src/mkmini_neupan_bringup/config/robots/mkmini/robot.yaml \
+  fast_lio_tf_config:=/workspaces/MK-mini_ws/neupan_mkmini_ws/src/mkmini_neupan_bringup/config/fast_lio_tf.yaml \
   start_mid360:=true \
   start_scan_pipeline:=true
 ```

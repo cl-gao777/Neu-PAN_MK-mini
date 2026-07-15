@@ -54,7 +54,7 @@
 推荐在原生 Linux 路径下运行，例如：
 
 ```bash
-~/ROS2_MK-mini
+~/workspaces/MK-mini_ws/ROS2_MK-mini
 ```
 
 不要把 `/mnt/e/...` 这类 Windows 挂载路径作为正式运行目录，ROS 2 构建、符号链接、权限和实时性都更容易出问题。
@@ -62,7 +62,7 @@
 ## 安装依赖
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 rosdep install --from-paths src --ignore-src -r -y
 ```
@@ -70,7 +70,7 @@ rosdep install --from-paths src --ignore-src -r -y
 ## 构建
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
@@ -225,7 +225,7 @@ docs/odom_accuracy_test_plan.md
 运行测试：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 colcon test --packages-select yhs_can_interfaces yhs_can_control
 colcon test-result --verbose

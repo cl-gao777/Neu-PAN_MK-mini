@@ -13,7 +13,7 @@
 ## 前提条件
 
 - Thor 使用 Ubuntu 24.04 + ROS 2 Jazzy。
-- 项目位于 Thor 原生 Linux 路径，例如 `~/ROS2_MK-mini`。
+- 项目位于 Thor 原生 Linux 路径 `~/workspaces/MK-mini_ws/ROS2_MK-mini`。
 - 不建议使用 `/mnt/e/...` 这类 Windows 挂载路径作为正式运行工作区。
 - 当前 Thor + PEAK PCAN-USB 部署默认 CAN 接口名为 `can4`，波特率为 `500000`；如果实际接口名不同，请按 `ip link` 结果覆盖 `can_name`。
 - 首次测试必须架空车轮或在安全测试区域进行。
@@ -22,7 +22,7 @@
 ## 构建 SDK
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 sudo apt update
 sudo apt install -y python3-colcon-common-extensions python3-rosdep can-utils
@@ -70,7 +70,7 @@ candump can4
 终端 1：
 
 ```bash
-cd ~/ROS2_MK-mini
+cd ~/workspaces/MK-mini_ws/ROS2_MK-mini
 source /opt/ros/jazzy/setup.bash
 source install/setup.bash
 ros2 launch yhs_can_control yhs_can_control.launch.py
@@ -80,7 +80,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 
 ```bash
 source /opt/ros/jazzy/setup.bash
-source ~/ROS2_MK-mini/install/setup.bash
+source ~/workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash
 ros2 topic list
 ros2 topic echo /chassis_info_fb
 ros2 topic echo /veh_diag_fb
