@@ -18,6 +18,7 @@ class SafetyBridgeTest(unittest.TestCase):
             BridgeConfig(
                 command_timeout_sec=0.3,
                 feedback_timeout_sec=0.5,
+                min_drive_speed_mps=0.1,
                 max_speed_mps=0.3,
                 max_steering_deg=25.0,
                 allow_reverse=False,
@@ -42,6 +43,36 @@ class SafetyBridgeTest(unittest.TestCase):
         self.assertAlmostEqual(decision.command.velocity_mps, 0.3)
         self.assertAlmostEqual(decision.command.steering_deg, 25.0)
 
+    def test_forward_speed_uses_configured_minimum_and_maximum(self):
+        cases = [
+            (0.0, 0.0),
+            (0.1, 0.5),
+            (0.5, 0.5),
+            (0.55, 0.55),
+            (0.6, 0.6),
+            (0.7, 0.6),
+        ]
+
+        for requested_speed, expected_speed in cases:
+            with self.subTest(requested_speed=requested_speed):
+                bridge = SafetyBridge(
+                    BridgeConfig(
+                        min_drive_speed_mps=0.5,
+                        max_speed_mps=0.6,
+                        require_feedback=False,
+                    )
+                )
+                bridge.set_drive_enabled(True, now_sec=9.0)
+                bridge.update_command(
+                    AckermannCommand(speed_mps=requested_speed, steering_rad=0.0),
+                    now_sec=10.0,
+                )
+
+                decision = bridge.evaluate(now_sec=10.1)
+
+                self.assertEqual(decision.reason, "active")
+                self.assertAlmostEqual(decision.command.velocity_mps, expected_speed)
+
     def test_disallowed_reverse_produces_stop(self):
         self.bridge.update_command(
             AckermannCommand(speed_mps=-0.2, steering_rad=0.1),
@@ -58,6 +89,7 @@ class SafetyBridgeTest(unittest.TestCase):
         bridge = SafetyBridge(
             BridgeConfig(
                 allow_reverse=True,
+                min_drive_speed_mps=0.1,
                 require_feedback=False,
                 forward_gear=4,
                 reverse_gear=2,
@@ -100,31 +132,122 @@ class SafetyBridgeTest(unittest.TestCase):
                 self.assertEqual(decision.command.steering_deg, 0.0)
 
     def test_required_localization_gates_motion(self):
-        bridge = SafetyBridge(
-            BridgeConfig(
-                require_feedback=False,
-                require_localization=True,
-                localization_timeout_sec=0.3,
+        def armed_bridge():
+            bridge = SafetyBridge(
+                BridgeConfig(
+                    require_feedback=False,
+                    require_localization=True,
+                    localization_timeout_sec=0.3,
+                )
             )
-        )
-        bridge.set_drive_enabled(True, now_sec=9.0)
-        bridge.update_command(
-            AckermannCommand(speed_mps=0.2, steering_rad=0.1), now_sec=10.0
-        )
+            bridge.set_drive_enabled(True, now_sec=9.0)
+            bridge.update_command(
+                AckermannCommand(speed_mps=0.5, steering_rad=0.1), now_sec=10.0
+            )
+            return bridge
 
+        bridge = armed_bridge()
         self.assertEqual(bridge.evaluate(10.1).reason, "localization_timeout")
 
+        bridge = armed_bridge()
         bridge.update_localization(healthy=False, now_sec=10.1)
         self.assertEqual(bridge.evaluate(10.2).reason, "localization_fault")
 
+        bridge = armed_bridge()
         bridge.update_localization(healthy=True, now_sec=10.1)
         self.assertEqual(bridge.evaluate(10.41).reason, "localization_timeout")
 
-        bridge.update_localization(healthy=True, now_sec=10.42)
+        bridge = armed_bridge()
+        bridge.update_localization(healthy=True, now_sec=10.0)
         bridge.update_command(
-            AckermannCommand(speed_mps=0.2, steering_rad=0.1), now_sec=10.42
+            AckermannCommand(speed_mps=0.5, steering_rad=0.1), now_sec=10.01
         )
-        self.assertEqual(bridge.evaluate(10.43).reason, "active")
+        self.assertEqual(bridge.evaluate(10.02).reason, "active")
+
+    def test_feedback_and_localization_safety_faults_latch_until_rearm(self):
+        scenarios = [
+            (
+                "feedback_fault",
+                BridgeConfig(require_feedback=True),
+                lambda bridge: bridge.update_feedback(False, 10.1),
+                10.2,
+                lambda bridge, now: bridge.update_feedback(True, now),
+            ),
+            (
+                "feedback_timeout",
+                BridgeConfig(require_feedback=True),
+                lambda bridge: None,
+                10.6,
+                lambda bridge, now: bridge.update_feedback(True, now),
+            ),
+            (
+                "feedback_time_invalid",
+                BridgeConfig(require_feedback=True),
+                lambda bridge: bridge.update_feedback(True, 11.0),
+                10.2,
+                lambda bridge, now: bridge.update_feedback(True, now),
+            ),
+            (
+                "localization_fault",
+                BridgeConfig(require_feedback=False, require_localization=True),
+                lambda bridge: bridge.update_localization(False, 10.1),
+                10.2,
+                lambda bridge, now: bridge.update_localization(True, now),
+            ),
+            (
+                "localization_timeout",
+                BridgeConfig(require_feedback=False, require_localization=True),
+                lambda bridge: None,
+                10.4,
+                lambda bridge, now: bridge.update_localization(True, now),
+            ),
+            (
+                "localization_time_invalid",
+                BridgeConfig(require_feedback=False, require_localization=True),
+                lambda bridge: bridge.update_localization(True, 11.0),
+                10.2,
+                lambda bridge, now: bridge.update_localization(True, now),
+            ),
+        ]
+
+        for reason, config, induce_fault, fault_time, recover in scenarios:
+            with self.subTest(reason=reason):
+                bridge = SafetyBridge(config)
+                bridge.set_drive_enabled(True, now_sec=9.0)
+                bridge.update_feedback(True, now_sec=10.0)
+                bridge.update_localization(True, now_sec=10.0)
+                bridge.update_command(
+                    AckermannCommand(speed_mps=0.5, steering_rad=0.0),
+                    now_sec=10.0,
+                )
+                induce_fault(bridge)
+
+                self.assertEqual(bridge.evaluate(fault_time).reason, reason)
+
+                recover(bridge, 12.0)
+                bridge.update_command(
+                    AckermannCommand(speed_mps=0.5, steering_rad=0.0),
+                    now_sec=12.0,
+                )
+                self.assertEqual(bridge.evaluate(12.01).reason, reason)
+
+                bridge.set_drive_enabled(False, now_sec=12.1)
+                self.assertEqual(bridge.evaluate(12.11).reason, "drive_disabled")
+                bridge.set_drive_enabled(True, now_sec=12.2)
+                bridge.update_command(
+                    AckermannCommand(speed_mps=0.5, steering_rad=0.0),
+                    now_sec=12.2,
+                )
+                self.assertEqual(
+                    bridge.evaluate(12.21).reason, "awaiting_fresh_command"
+                )
+
+                recover(bridge, 12.22)
+                bridge.update_command(
+                    AckermannCommand(speed_mps=0.5, steering_rad=0.0),
+                    now_sec=12.22,
+                )
+                self.assertEqual(bridge.evaluate(12.23).reason, "active")
 
     def test_non_finite_command_produces_stop(self):
         commands = [
@@ -252,11 +375,19 @@ class SafetyBridgeTest(unittest.TestCase):
 
 
 class BridgeConfigTest(unittest.TestCase):
+    def test_default_drive_speed_window_matches_robot_policy(self):
+        config = BridgeConfig()
+
+        self.assertEqual(config.min_drive_speed_mps, 0.5)
+        self.assertEqual(config.max_speed_mps, 0.6)
+
     def test_rejects_non_positive_safety_limits(self):
         invalid_configs = [
             dict(command_timeout_sec=0.0),
             dict(feedback_timeout_sec=-0.1),
             dict(localization_timeout_sec=0.0),
+            dict(min_drive_speed_mps=0.0),
+            dict(min_drive_speed_mps=math.nan),
             dict(max_speed_mps=-0.3),
             dict(max_steering_deg=0.0),
         ]
@@ -265,6 +396,12 @@ class BridgeConfigTest(unittest.TestCase):
             with self.subTest(values=values):
                 with self.assertRaises(ValueError):
                     BridgeConfig(**values)
+
+    def test_rejects_minimum_drive_speed_above_maximum(self):
+        with self.assertRaisesRegex(
+            ValueError, "min_drive_speed_mps must not exceed max_speed_mps"
+        ):
+            BridgeConfig(min_drive_speed_mps=0.7, max_speed_mps=0.6)
 
     def test_rejects_out_of_range_gears(self):
         for values in [

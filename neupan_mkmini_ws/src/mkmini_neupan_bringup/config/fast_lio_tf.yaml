@@ -1,0 +1,17 @@
+# FAIL-SAFE DEFAULT: replace the measured values at the site, then set calibrated true.
+# Assumption: FAST_LIO frame `body` coincides with the MID360 IMU/livox physical frame.
+# Published chain: odom -> camera_init -> body -> base_link -> livox_frame
+calibrated: false
+frames:
+  odom: odom
+  camera_init: camera_init
+  body: body
+  base: base_link
+  lidar: livox_frame
+base_to_livox:
+  x: 0.0
+  y: 0.0
+  z: 0.0
+  roll: 0.0
+  pitch: 0.0
+  yaw: 0.0

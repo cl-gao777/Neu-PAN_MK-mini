@@ -19,6 +19,7 @@ CONTAINER_RUNNER="${CONTAINER_WS_DIR}/scripts/start_real_robot_neupan.sh"
 CAN_IFACE="${CAN_IFACE:-can4}"
 LIDAR_HOST_CIDR="${LIDAR_HOST_CIDR:-192.168.1.50/24}"
 LIDAR_IP="${LIDAR_IP:-192.168.1.3}"
+RUNTIME_MANIFEST="/etc/mkmini/thor-runtime.lock.json"
 
 usage() {
     cat <<'EOF'
@@ -122,6 +123,27 @@ check_docker_image() {
     fi
 }
 
+check_nvidia_runtime_and_image() {
+    local check_output
+    if ! docker info --format '{{json .Runtimes}}' | grep -q '"nvidia"'; then
+        echo "ERROR: Docker NVIDIA runtime is not registered." >&2
+        exit 1
+    fi
+    if ! check_output="$(docker run --rm \
+        --runtime nvidia \
+        -e NVIDIA_VISIBLE_DEVICES=all \
+        -e NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,video \
+        --entrypoint python3 \
+        "${IMAGE_NAME}" \
+        -c 'import pathlib, torch; assert pathlib.Path("/etc/mkmini/thor-runtime.lock.json").is_file(); assert torch.cuda.is_available(), "Torch cannot access the Thor GPU"; print(torch.__version__, torch.version.cuda, torch.cuda.get_device_name(0))' \
+        2>&1)"; then
+        echo "ERROR: image '${IMAGE_NAME}' failed its NVIDIA Torch check:" >&2
+        echo "${check_output}" >&2
+        exit 1
+    fi
+    echo "NVIDIA Torch runtime: ${check_output}"
+}
+
 check_can_iface() {
     local operstate_path="/sys/class/net/${CAN_IFACE}/operstate"
     if [[ ! -e "/sys/class/net/${CAN_IFACE}" ]]; then
@@ -182,8 +204,17 @@ container_exists_id() {
 
 run_in_existing_container() {
     echo "Reusing running container '${CONTAINER_NAME}'."
+    if ! docker exec "${CONTAINER_NAME}" python3 -c \
+        'import torch; assert torch.cuda.is_available(); print(torch.__version__, torch.version.cuda)' \
+        >/dev/null 2>&1
+    then
+        echo "ERROR: running container '${CONTAINER_NAME}' has no usable CUDA Torch runtime." >&2
+        echo "Exit it and rebuild/restart the MK-mini image." >&2
+        exit 1
+    fi
     exec docker exec -it \
         -e MKMINI_IN_CONTAINER=1 \
+        -e MKMINI_THOR_RUNTIME_MANIFEST="${RUNTIME_MANIFEST}" \
         -w "${CONTAINER_WS_DIR}" \
         "${CONTAINER_NAME}" \
         /bin/bash -lc 'exec bash "$1" "${@:2}"' \
@@ -194,6 +225,7 @@ start_temporary_container() {
     echo "Starting '${CONTAINER_NAME}' from image '${IMAGE_NAME}'."
     exec docker run -it --rm \
         --name "${CONTAINER_NAME}" \
+        --runtime nvidia \
         --network host \
         --ipc host \
         --pid host \
@@ -201,6 +233,9 @@ start_temporary_container() {
         -v "${HOST_WS_DIR}:${CONTAINER_REPO_DIR}" \
         -w "${CONTAINER_WS_DIR}" \
         -e "MKMINI_IN_CONTAINER=1" \
+        -e "MKMINI_THOR_RUNTIME_MANIFEST=${RUNTIME_MANIFEST}" \
+        -e "NVIDIA_VISIBLE_DEVICES=all" \
+        -e "NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,video" \
         -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}" \
         -e "RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}" \
         "${IMAGE_NAME}" \
@@ -222,15 +257,20 @@ dry_run() {
     print_command bash "${CONTAINER_RUNNER}" "$@"
     echo ""
     echo "If '${CONTAINER_NAME}' is already running, this script would run:"
-    print_command docker exec -it -e MKMINI_IN_CONTAINER=1 -w "${CONTAINER_WS_DIR}" \
+    print_command docker exec -it -e MKMINI_IN_CONTAINER=1 \
+        -e "MKMINI_THOR_RUNTIME_MANIFEST=${RUNTIME_MANIFEST}" -w "${CONTAINER_WS_DIR}" \
         "${CONTAINER_NAME}" /bin/bash -lc \
         'exec bash "$1" "${@:2}"' \
         mkmini-real-robot-runner "${CONTAINER_RUNNER}" "$@"
     echo ""
     echo "Otherwise it would start:"
-    print_command docker run -it --rm --name "${CONTAINER_NAME}" --network host --ipc host --pid host \
+    print_command docker run -it --rm --name "${CONTAINER_NAME}" --runtime nvidia \
+        --network host --ipc host --pid host \
         --privileged -v "${HOST_WS_DIR}:${CONTAINER_REPO_DIR}" -w "${CONTAINER_WS_DIR}" \
-        -e "MKMINI_IN_CONTAINER=1" -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}" \
+        -e "MKMINI_IN_CONTAINER=1" -e "MKMINI_THOR_RUNTIME_MANIFEST=${RUNTIME_MANIFEST}" \
+        -e "NVIDIA_VISIBLE_DEVICES=all" \
+        -e "NVIDIA_DRIVER_CAPABILITIES=compute,utility,graphics,video" \
+        -e "ROS_DOMAIN_ID=${ROS_DOMAIN_ID:-0}" \
         -e "RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION:-rmw_cyclonedds_cpp}" "${IMAGE_NAME}" \
         /bin/bash -lc 'exec bash "$1" "${@:2}"' \
         mkmini-real-robot-runner "${CONTAINER_RUNNER}" "$@"
@@ -252,6 +292,7 @@ fi
 
 check_host_workspace
 check_docker_image
+check_nvidia_runtime_and_image
 check_can_iface
 check_lidar_host_network
 

@@ -1,8 +1,18 @@
 from glob import glob
+import os
 from setuptools import find_packages, setup
 
 
 package_name = "mkmini_neupan_bringup"
+
+
+def recursive_data_files(source_dir):
+    files = []
+    for root, _directories, names in os.walk(source_dir):
+        selected = [os.path.join(root, name) for name in names]
+        if selected:
+            files.append((os.path.join("share", package_name, root), selected))
+    return files
 
 setup(
     name=package_name,
@@ -11,8 +21,7 @@ setup(
     data_files=[
         ("share/ament_index/resource_index/packages", ["resource/" + package_name]),
         ("share/" + package_name, ["package.xml"]),
-        ("share/" + package_name + "/config", glob("config/*.yaml")),
-        ("share/" + package_name + "/config", glob("config/*.json")),
+        *recursive_data_files("config"),
         ("share/" + package_name + "/launch", glob("launch/*.launch.py")),
         ("share/" + package_name + "/rviz", glob("rviz/*.rviz")),
     ],

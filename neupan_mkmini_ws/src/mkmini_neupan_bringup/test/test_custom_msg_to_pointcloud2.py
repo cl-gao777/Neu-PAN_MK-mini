@@ -52,21 +52,24 @@ class CustomMsgToPointCloud2Test(unittest.TestCase):
         self.assertIn('DeclareLaunchArgument("start_mid360", default_value="false")', launch_file)
         self.assertIn('DeclareLaunchArgument("start_visualization_cloud", default_value="false")', launch_file)
         self.assertIn('DeclareLaunchArgument("start_scan_pipeline", default_value="false")', launch_file)
-        self.assertIn('"mid360_driver.launch.py"', launch_file)
-        self.assertIn("IfCondition(start_mid360)", launch_file)
+        self.assertIn('"fast_lio_mid360.launch.py"', launch_file)
+        self.assertIn('"start_fast_lio": start_fast_lio', launch_file)
+        self.assertIn('"start_mid360": start_mid360', launch_file)
         self.assertIn('executable="custom_msg_to_pointcloud2"', launch_file)
         self.assertIn("visualization_cloud_condition", launch_file)
-        self.assertIn("PythonExpression([start_visualization_cloud", launch_file)
-        self.assertIn('" or "', launch_file)
-        self.assertIn("start_scan_pipeline])", launch_file)
+        self.assertIn("PythonExpression(", launch_file)
+        self.assertIn("' == 'true' or '", launch_file)
+        self.assertIn("' == 'true'", launch_file)
         self.assertIn('"input_topic": "/livox/lidar"', launch_file)
         self.assertIn('"output_topic": "/livox/points"', launch_file)
-        self.assertIn('"perception_slam.launch.py"', launch_file)
+        self.assertIn('"scan_pipeline.launch.py"', launch_file)
         self.assertIn("IfCondition(start_scan_pipeline)", launch_file)
+        self.assertIn('"perception_slam.launch.py"', launch_file)
+        self.assertIn("IfCondition(start_slam)", launch_file)
 
     def test_scan_pipeline_defaults_to_converted_pointcloud2_topic(self):
         launch_file = (
-            PACKAGE_ROOT / "launch" / "perception_slam.launch.py"
+            PACKAGE_ROOT / "launch" / "scan_pipeline.launch.py"
         ).read_text(encoding="utf-8")
 
         self.assertIn('DeclareLaunchArgument("cloud_topic", default_value="/livox/points")', launch_file)
@@ -79,7 +82,8 @@ class CustomMsgToPointCloud2Test(unittest.TestCase):
         self.assertIn("custom_msg_to_pointcloud2", setup_py)
         self.assertIn("thor_neupan_preflight", setup_py)
         self.assertIn("find_packages", setup_py)
-        self.assertIn('glob("config/*.json")', setup_py)
+        self.assertIn('recursive_data_files("config")', setup_py)
+        self.assertIn("os.walk", setup_py)
         self.assertIn("<exec_depend>livox_ros_driver2</exec_depend>", package_xml)
         self.assertIn("<exec_depend>sensor_msgs_py</exec_depend>", package_xml)
         self.assertIn("<exec_depend>tf2_ros</exec_depend>", package_xml)

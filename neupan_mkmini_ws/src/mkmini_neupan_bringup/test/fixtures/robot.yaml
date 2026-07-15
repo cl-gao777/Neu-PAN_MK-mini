@@ -1,0 +1,4 @@
+neupan_node:
+  ros__parameters:
+    planner_config_file: planner.yaml
+    dune_checkpoint_file: model.pth

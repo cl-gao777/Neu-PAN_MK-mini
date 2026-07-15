@@ -25,8 +25,8 @@ def generate_launch_description():
                 "can_params",
                 default_value=os.path.join(share, "config", "yhs_can_control_safe.yaml"),
             ),
-            DeclareLaunchArgument("start_can_driver", default_value="true"),
-            DeclareLaunchArgument("use_legacy_adapter", default_value="true"),
+            DeclareLaunchArgument("start_can_driver", default_value="false"),
+            DeclareLaunchArgument("use_legacy_adapter", default_value="false"),
             Node(
                 package="yhs_can_control",
                 executable="yhs_can_control_node",

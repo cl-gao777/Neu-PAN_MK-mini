@@ -5,4 +5,11 @@ yhs_can_control_node:
     publish_odom_tf: false
     odom_frame_id: odom
     base_frame_id: base_link
+    max_velocity_mps: 0.6
+    max_steering_deg: 25.0
+    command_timeout_sec: 0.3
+    send_rate_hz: 50.0
+    allow_reverse: false
+    forward_gear: 4
+    reverse_gear: 2
     ultrasonic_number: [0, 1, 2, 3, 4, 5, 6, 7]

@@ -1,0 +1,19 @@
+neupan_node:
+  ros__parameters:
+    robot_type: acker
+    robot_description: "YUHESEN MK-mini Ackermann robot"
+    planner_config_file: planner.yaml
+    dune_checkpoint_file: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoint/dune/model_5000.pth
+    map_frame: map
+    base_frame: base_link
+    lidar_frame: base_link
+    cmd_vel_topic: /neupan_cmd_vel
+    scan_topic: /scan
+    plan_input_topic: /plan
+    goal_topic: /goal_pose
+    refresh_initial_path: true
+    control_frequency: 20.0
+    enable_visualization: false
+    enable_dune_markers: false
+    enable_nrmp_markers: false
+    enable_robot_marker: false

@@ -4,9 +4,11 @@
 
 **镜像只放环境，不烤代码。**
 
-- `Dockerfile` 只装 ROS 2 Jazzy + apt 系统依赖 + 开发工具，不对仓库文件做 `ADD`/`COPY`
+- `Dockerfile` 以固定且已确认包含 `linux/arm64` 的 NVIDIA PyTorch 多架构镜像为基础，再安装 ROS 2 Jazzy、系统依赖和开发工具，不对仓库源码做 `ADD`/`COPY`
 - 代码在运行时通过 `-v` bind mount 挂入容器
 - 改代码不需要重新构建镜像
+- Torch、CUDA 和 cuDNN 由 NVIDIA 基础镜像提供，不使用普通 PyPI Torch 替代
+- 镜像构建时把精确的 `torch.__version__` 和 `torch.version.cuda` 写入 `/etc/mkmini/thor-runtime.lock.json`
 - 所有 `docker/scripts/` 下的脚本已内置容器路径翻译，无需手动记路径
 
 ## 2. 前提条件
@@ -15,7 +17,8 @@
 
 - Docker Engine 已安装，你的用户已加入 `docker` 组
 - Thor 为 ARM64 架构（`uname -m` 输出 `aarch64`）
-- （可选）`nvidia-container-toolkit` — 需要 GPU 加速时用到
+- JetPack 7.2 / L4T R39.2、CUDA 13.2 和驱动 595.78
+- `nvidia-container-toolkit` 已安装，`docker info` 中存在 `nvidia` runtime
 
 ### 你的开发机上（Windows）
 
@@ -69,8 +72,64 @@ scp -r E:\Codex_ws\MK-mini_ws <your_user>@<thor_ip>:~/workspaces/
 
 ```bash
 cd ~/workspaces/MK-mini_ws/docker
-docker build -t mkmini-jazzy:dev .
+docker pull --platform linux/arm64 nvcr.io/nvidia/pytorch:26.06-py3
+docker build \
+  --network host \
+  --platform linux/arm64 \
+  --build-arg PYTORCH_BASE_IMAGE=nvcr.io/nvidia/pytorch:26.06-py3 \
+  --build-arg HTTP_PROXY=http://127.0.0.1:7890 \
+  --build-arg HTTPS_PROXY=http://127.0.0.1:7890 \
+  -t mkmini-jazzy:dev .
 ```
+
+仓库默认基础镜像为已确认包含 `linux/arm64` manifest 的
+`nvcr.io/nvidia/pytorch:26.06-py3`。如需覆盖，必须选择包含 `linux/arm64`
+且与 JetPack 7.2/CUDA 13.2 兼容的标签，并记录完整标签：
+
+```bash
+docker build \
+  --build-arg PYTORCH_BASE_IMAGE=nvcr.io/nvidia/pytorch:26.06-py3 \
+  -t mkmini-jazzy:dev .
+```
+
+Ubuntu ARM64 和 ROS 2 APT 源默认使用实测更稳定的 USTC 镜像，并配置
+10 次瞬态错误重试。默认 target `dev` 只构建 NeuPAN 核心环境；Nav2
+global planner 与完整 SLAM/RViz 调试环境是可选 target：
+
+```bash
+# 默认：NeuPAN + FAST-LIO/scan + MK-mini，不安装完整 Navigation2
+docker build --target dev -t mkmini-jazzy:dev .
+
+# 可选：仅增加 Nav2 planner server、costmap、map server 和常用插件
+docker build --target nav2-planner -t mkmini-jazzy:nav2-planner .
+
+# 可选：完整 Nav2 + SLAM Toolbox + RViz 调试环境
+docker build --target full-debug -t mkmini-jazzy:full-debug .
+```
+
+镜像参数可以覆盖：
+
+```bash
+docker build \
+  --network host \
+  --platform linux/arm64 \
+  --build-arg UBUNTU_PORTS_MIRROR=https://mirrors.ustc.edu.cn/ubuntu-ports \
+  --build-arg ROS2_APT_MIRROR=https://mirrors.ustc.edu.cn/ros2/ubuntu \
+  --build-arg APT_MIRROR_HOST=mirrors.ustc.edu.cn \
+  -t mkmini-jazzy:dev .
+```
+
+构建完成后先做独立 GPU 检查：
+
+```bash
+docker run --rm --runtime nvidia \
+  -e NVIDIA_VISIBLE_DEVICES=all \
+  -e NVIDIA_DRIVER_CAPABILITIES=compute,utility \
+  mkmini-jazzy:dev \
+  python3 -c 'import torch; print(torch.__version__); print(torch.version.cuda); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))'
+```
+
+预期 `torch.cuda.is_available()` 为 `True`，设备名称包含 `NVIDIA Thor`。
 
 ### 第 3 步：启动容器
 
@@ -119,7 +178,8 @@ MKMINI_IMAGE=mkmini-jazzy:dev \
 CAN_IFACE=can4 \
 LIDAR_HOST_CIDR=192.168.1.50/24 \
 bash docker/start_real_robot_neupan.sh \
-  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/neupan_site.yaml \
+  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/robots/site/robot.yaml \
+  fast_lio_tf_config:=/workspaces/MK-mini_ws/neupan_mkmini_ws/config/fast_lio_tf_site.yaml \
   start_mid360:=true \
   start_scan_pipeline:=true
 ```
@@ -193,7 +253,7 @@ ros2 run tf2_ros tf2_echo odom base_link
 **发指令测试运动：**
 
 ```bash
-bash docker/scripts/send_cmd_vel.sh forward       # 前进 0.3 m/s
+bash docker/scripts/send_cmd_vel.sh forward       # 前进 0.5 m/s
 bash docker/scripts/send_cmd_vel.sh forward 0.5    # 前进 0.5 m/s
 bash docker/scripts/send_cmd_vel.sh turn           # 轻微转向
 bash docker/scripts/send_cmd_vel.sh stop           # 停车
@@ -211,10 +271,10 @@ bash docker/scripts/send_cmd_vel.sh stop           # 停车
 
 ```bash
 # 1.0 m 低速测试
-bash docker/scripts/run_odom_test.sh --distance 1.0 --speed 0.3
+bash docker/scripts/run_odom_test.sh --distance 1.0 --speed 0.5
 
 # 2.0 m 测试，输出到挂载目录
-bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.3 \
+bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.5 \
     --csv /workspaces/MK-mini_ws/odom_results.csv
 ```
 
@@ -222,10 +282,10 @@ bash docker/scripts/run_odom_test.sh --distance 2.0 --speed 0.3 \
 
 | 轮次 | 目标距离 | 速度 | 重复 | 命令 |
 |---|---|---|---|---|
-| 1 | 0.5 m | 0.3 m/s | 3 | `--distance 0.5 --speed 0.3` |
-| 2 | 1.0 m | 0.3 m/s | 3 | `--distance 1.0 --speed 0.3` |
-| 3 | 2.0 m | 0.3 m/s | 3 | `--distance 2.0 --speed 0.3` |
-| 4 | 1.0 m | 0.5 m/s | 3 | `--distance 1.0 --speed 0.5` |
+| 1 | 0.5 m | 0.5 m/s | 3 | `--distance 0.5 --speed 0.5` |
+| 2 | 1.0 m | 0.5 m/s | 3 | `--distance 1.0 --speed 0.5` |
+| 3 | 2.0 m | 0.5 m/s | 3 | `--distance 2.0 --speed 0.5` |
+| 4 | 1.0 m | 0.6 m/s | 3 | `--distance 1.0 --speed 0.6` |
 | 5 | 2.0 m | 0.5 m/s | 3 | `--distance 2.0 --speed 0.5` |
 
 **误差计算：**
@@ -260,7 +320,7 @@ ros2 topic list | grep -E 'ctrl_cmd|chassis_info_fb|veh_diag_fb|odom|cmd_vel'
 ros2 run tf2_ros tf2_echo odom base_link
 
 # 架空轮测试
-bash docker/scripts/run_odom_test.sh --distance 0.5 --speed 0.3
+bash docker/scripts/run_odom_test.sh --distance 0.5 --speed 0.5
 ```
 
 ---
@@ -294,7 +354,7 @@ source /opt/ros/jazzy/setup.bash
 cd /workspaces/MK-mini_ws/neupan_mkmini_ws
 
 # 拉取外部源码
-vcs import . < mkmini_neupan.repos
+bash scripts/import_upstreams.sh /workspaces/MK-mini_ws/ROS2_MK-mini/src
 
 # 复制底盘包
 cp -a /workspaces/MK-mini_ws/ROS2_MK-mini/src/yhs_can_control src/
@@ -372,13 +432,19 @@ bash docker/scripts/run_tests.sh --bridge-only
 | `rosdep: command not found` | rosdep 未初始化 | 容器内手动执行 `rosdep init && rosdep update` |
 | DDS 节点互相不可见 | 防火墙或 ROS_DOMAIN_ID 不一致 | Thor 宿主机可能需要 `sudo ufw disable`。确认所有终端使用相同 ROS_DOMAIN_ID |
 | 镜像构建失败（x86_64） | 在 Windows 上构建 | **必须在 Thor 上构建。** Docker 不支持跨架构运行 |
+| `No module named torch` | 仍在使用旧的 `ros:jazzy` 镜像 | 删除或重命名旧镜像，按第 2 步用 NVIDIA PyTorch ARM64 基础镜像重建 |
+| `torch.cuda.is_available()` 为 `False` | 未使用 NVIDIA runtime，或镜像标签与 JetPack 不兼容 | 确认 `docker info` 包含 `nvidia`，并使用 `--runtime nvidia`；核对 PyTorch ARM64 标签 |
+| `/etc/mkmini/thor-runtime.lock.json` 不存在 | 镜像不是当前 Dockerfile 构建 | 重新执行 `docker build -t mkmini-jazzy:dev .` |
+| 拉取 `nvcr.io` 或 `registry-1.docker.io` 报 `EOF` | Thor 到容器 Registry 的 HTTPS、DNS、代理或 IPv6 链路中断 | 先用 `curl -I https://nvcr.io/v2/` 和 `curl -I https://registry-1.docker.io/v2/` 定位；不要继续启动旧镜像 |
+| APT 在下载末尾报 `502 Bad Gateway [IP: 127.0.0.1 7890]` | 本地代理未能完成海外 Ubuntu/ROS 包请求 | 使用默认 USTC APT 镜像重新构建；Dockerfile 已配置直连镜像、10 次重试和分层安装 |
+| `libucc.so.1: undefined symbol: ucs_config_doc_nop` 或 `libtorch_cpu.so: undefined symbol: ompi_mpi_short_float` | ROS/Nav2 安装的系统 UCX/OpenMPI 被 NVIDIA PyTorch 错误加载 | 使用当前 Dockerfile，使 `/opt/hpcx/ompi/lib` 和 `/opt/hpcx/ucx/lib` 在系统库之前；重新构建时 APT 层应命中缓存 |
 | 容器退出后 CSV 日志丢失 | 写在 `/tmp` 内 | 使用 bind mount 路径：`--csv /workspaces/MK-mini_ws/results.csv` |
 | build 目录权限问题 | 容器内以 root 运行 | 在 Thor 宿主机上：`sudo chown -R $USER:$USER ~/workspaces/` |
 
 ## 7. 未来生产化注意事项
 
 - **非 root 用户：** 可在 Dockerfile 中创建与 Thor 主机 UID/GID 一致的用户
-- **GPU 加速：** 在 `run_mkmini_dev.sh` 中添加 `--runtime=nvidia`
+- **GPU 运行时：** `run_mkmini_dev.sh` 和真机一键入口已显式使用 `--runtime nvidia`，启动前会验证 Torch 能访问 Thor GPU
 - **权限最小化：** 生产部署时将 `--privileged` 替换为精确的 `--cap-add` 和 `--device` 参数
 - **CI/CD：** 可增加 entrypoint 脚本自动执行 `vcs import` → `colcon build` → 测试 → 启动
 

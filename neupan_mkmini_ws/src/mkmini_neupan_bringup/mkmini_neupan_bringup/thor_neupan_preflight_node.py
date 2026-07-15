@@ -1,5 +1,7 @@
 import argparse
 import importlib
+import json
+import math
 import os
 from pathlib import Path
 import re
@@ -10,9 +12,17 @@ import time
 from dataclasses import dataclass
 from typing import Callable, Iterable, Sequence
 
+from .neupan_config import load_neupan_config_paths
+
 
 CHECKPOINT_PLACEHOLDER = "REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT"
-REQUIRED_MODULES = ("torch", "cvxpy", "cvxpylayers", "neupan")
+THOR_RUNTIME_LOCK_FILENAME = "thor-runtime.lock.json"
+IMAGE_RUNTIME_MANIFEST = Path("/etc/mkmini/thor-runtime.lock.json")
+UNSET_LOCK_VALUES = {"", "unknown", "unset", "none", "null"}
+REQUIRED_MODULES = (
+    "torch", "numpy", "scipy", "cvxpy", "cvxpylayers", "ecos", "yaml", "gctl",
+    "rich", "dill", "colorama", "neupan"
+)
 
 
 @dataclass(frozen=True)
@@ -25,7 +35,7 @@ class TopicRateCheck:
 REQUIRED_TOPIC_RATES = (
     TopicRateCheck("/livox/lidar", 8.0, 8.0),
     TopicRateCheck("/livox/points", 8.0, 8.0),
-    TopicRateCheck("/odom", 5.0, 8.0),
+    TopicRateCheck("/Odometry", 5.0, 8.0),
     TopicRateCheck("/scan", 5.0, 8.0),
     TopicRateCheck("/plan", 0.1, 20.0),
     TopicRateCheck("/chassis_info_fb", 5.0, 8.0),
@@ -87,6 +97,97 @@ def _coerce_output(value) -> str:
     return str(value)
 
 
+def default_thor_runtime_manifest_path() -> Path:
+    override = os.environ.get("MKMINI_THOR_RUNTIME_MANIFEST")
+    if override:
+        return Path(override).expanduser()
+    if IMAGE_RUNTIME_MANIFEST.is_file():
+        return IMAGE_RUNTIME_MANIFEST
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / THOR_RUNTIME_LOCK_FILENAME
+        if candidate.is_file():
+            return candidate
+    return Path.cwd() / THOR_RUNTIME_LOCK_FILENAME
+
+
+def _is_unset_lock_value(value: object) -> bool:
+    if not isinstance(value, str):
+        return True
+    normalized = value.strip().lower()
+    return (
+        normalized in UNSET_LOCK_VALUES
+        or "replace_with" in normalized
+        or "placeholder" in normalized
+        or normalized.startswith("todo")
+    )
+
+
+def check_thor_runtime_manifest(
+    manifest_path: Path | None = None,
+    importer: Callable[[str], object] = importlib.import_module,
+) -> list[CheckResult]:
+    path = Path(manifest_path or default_thor_runtime_manifest_path()).expanduser()
+    if not path.is_file():
+        return [CheckResult(
+            "Thor runtime manifest",
+            "FAIL",
+            f"runtime lock does not exist: {path}",
+        )]
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        return [CheckResult("Thor runtime manifest", "FAIL", str(error))]
+
+    torch_lock = document.get("torch") if isinstance(document, dict) else None
+    expected_version = torch_lock.get("version") if isinstance(torch_lock, dict) else None
+    if _is_unset_lock_value(expected_version):
+        return [CheckResult(
+            "Thor runtime manifest",
+            "FAIL",
+            (
+                f"{path} must record the exact torch.version field reported by "
+                "torch.__version__; placeholders and unset values are not accepted"
+            ),
+        )]
+
+    expected_cuda = torch_lock.get("cuda_version")
+    if expected_cuda is not None and _is_unset_lock_value(expected_cuda):
+        return [CheckResult(
+            "Thor runtime manifest",
+            "FAIL",
+            "torch.cuda_version must be null or an exact non-placeholder version",
+        )]
+
+    try:
+        torch_module = importer("torch")
+    except Exception as error:
+        return [CheckResult("Thor runtime manifest", "FAIL", f"cannot import torch: {error}")]
+
+    actual_version = str(getattr(torch_module, "__version__", "")).strip()
+    if not actual_version or actual_version != expected_version:
+        return [CheckResult(
+            "Thor runtime manifest",
+            "FAIL",
+            f"expected {expected_version}, found {actual_version or 'unset'}",
+        )]
+
+    if expected_cuda is not None:
+        actual_cuda = getattr(getattr(torch_module, "version", None), "cuda", None)
+        actual_cuda = None if actual_cuda is None else str(actual_cuda)
+        if actual_cuda != expected_cuda:
+            return [CheckResult(
+                "Thor runtime manifest",
+                "FAIL",
+                f"expected CUDA {expected_cuda}, found {actual_cuda or 'unset'}",
+            )]
+
+    return [CheckResult(
+        "Thor runtime manifest",
+        "PASS",
+        f"torch {actual_version} matches runtime lock",
+    )]
+
+
 def check_python_modules(
     importer: Callable[[str], object] = importlib.import_module,
 ) -> list[CheckResult]:
@@ -104,6 +205,35 @@ def check_python_modules(
             )
             continue
         version = getattr(module, "__version__", "unknown")
+        version_numbers = tuple(
+            int(value) for value in re.findall(r"\d+", str(version))[:2]
+        )
+        if module_name == "torch" and version_numbers < (2, 1):
+            results.append(
+                CheckResult(
+                    "Python runtime torch>=2.1",
+                    "FAIL",
+                    f"torch>=2.1 required, found {version}",
+                )
+            )
+        if module_name == "numpy" and version_numbers >= (2, 0):
+            results.append(
+                CheckResult(
+                    "Python runtime numpy<2",
+                    "FAIL",
+                    f"numpy<2 required, found {version}",
+                )
+            )
+        if module_name == "cvxpy" and callable(
+            getattr(module, "installed_solvers", None)
+        ) and "ECOS" not in module.installed_solvers():
+            results.append(
+                CheckResult(
+                    "CVXPY solver ECOS",
+                    "FAIL",
+                    "ECOS is not present in cvxpy.installed_solvers()",
+                )
+            )
         results.append(
             CheckResult(
                 f"Python module {module_name}",
@@ -114,6 +244,54 @@ def check_python_modules(
     return results
 
 
+def _run_cvxpylayer_autograd_smoke() -> tuple[float, float]:
+    torch = importlib.import_module("torch")
+    cvxpy = importlib.import_module("cvxpy")
+    cvxpylayers_torch = importlib.import_module("cvxpylayers.torch")
+
+    variable = cvxpy.Variable(1)
+    target = cvxpy.Parameter(1)
+    problem = cvxpy.Problem(
+        cvxpy.Minimize(cvxpy.sum_squares(variable - target)),
+        [variable >= 0],
+    )
+    if not problem.is_dpp():
+        raise RuntimeError("CvxpyLayer smoke problem is not DPP-compliant")
+
+    layer = cvxpylayers_torch.CvxpyLayer(
+        problem,
+        parameters=[target],
+        variables=[variable],
+    )
+    target_tensor = torch.tensor(
+        [2.0],
+        dtype=torch.float64,
+        requires_grad=True,
+    )
+    (solution_tensor,) = layer(target_tensor)
+    loss = torch.sum(solution_tensor ** 2)
+    loss.backward()
+    if target_tensor.grad is None:
+        raise RuntimeError("CvxpyLayer backward did not produce a gradient")
+    return solution_tensor.item(), target_tensor.grad.item()
+
+
+def check_cvxpylayer_autograd(
+    smoke_test: Callable[[], tuple[float, float]] | None = None,
+) -> CheckResult:
+    try:
+        solution, gradient = (smoke_test or _run_cvxpylayer_autograd_smoke)()
+    except Exception as error:
+        return CheckResult("CvxpyLayer forward/backward", "FAIL", str(error))
+
+    detail = f"solution={solution:.6f}, gradient={gradient:.6f}"
+    if not math.isfinite(solution) or not math.isfinite(gradient):
+        return CheckResult("CvxpyLayer forward/backward", "FAIL", detail)
+    if abs(solution - 2.0) >= 1e-3 or abs(gradient - 4.0) >= 1e-2:
+        return CheckResult("CvxpyLayer forward/backward", "FAIL", detail)
+    return CheckResult("CvxpyLayer forward/backward", "PASS", detail)
+
+
 def default_neupan_config_path() -> Path:
     try:
         from ament_index_python.packages import get_package_share_directory
@@ -121,92 +299,36 @@ def default_neupan_config_path() -> Path:
         return (
             Path(get_package_share_directory("mkmini_neupan_bringup"))
             / "config"
-            / "neupan_mkmini.yaml"
+            / "robots"
+            / "mkmini"
+            / "robot.yaml"
         )
     except Exception:
-        return Path(__file__).resolve().parents[1] / "config" / "neupan_mkmini.yaml"
-
-
-def extract_dune_checkpoint(config_text: str) -> str | None:
-    in_pan_block = False
-    pan_indent = 0
-    for line in config_text.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#"):
-            continue
-        indent = len(line) - len(line.lstrip())
-        if stripped == "pan:":
-            in_pan_block = True
-            pan_indent = indent
-            continue
-        if in_pan_block and indent <= pan_indent:
-            in_pan_block = False
-        if in_pan_block and stripped.startswith("dune_checkpoint:"):
-            value = stripped.split(":", 1)[1].strip()
-            return value.strip("\"'")
-    return None
-
-
-def check_neupan_config_contents(
-    config_text: str,
-    checkpoint_exists: Callable[[Path], bool] | None = None,
-) -> list[CheckResult]:
-    exists = checkpoint_exists or Path.is_file
-    results = []
-    if CHECKPOINT_PLACEHOLDER in config_text:
-        results.append(
-            CheckResult(
-                "MK-mini DUNE checkpoint",
-                "FAIL",
-                "checkpoint placeholder is still present in neupan_mkmini.yaml",
-            )
+        return (
+            Path(__file__).resolve().parents[1]
+            / "config"
+            / "robots"
+            / "mkmini"
+            / "robot.yaml"
         )
-        return results
-
-    checkpoint = extract_dune_checkpoint(config_text)
-    if not checkpoint:
-        results.append(
-            CheckResult(
-                "MK-mini DUNE checkpoint",
-                "FAIL",
-                "pan.dune_checkpoint is missing from NeuPAN config",
-            )
-        )
-        return results
-
-    checkpoint_path = Path(checkpoint).expanduser()
-    if not exists(checkpoint_path):
-        results.append(
-            CheckResult(
-                "MK-mini DUNE checkpoint",
-                "FAIL",
-                f"checkpoint file does not exist: {checkpoint_path}",
-            )
-        )
-        return results
-
-    results.append(
-        CheckResult(
-            "MK-mini DUNE checkpoint",
-            "PASS",
-            str(checkpoint_path),
-        )
-    )
-    return results
 
 
 def check_neupan_config(config_path: Path) -> list[CheckResult]:
-    if not config_path.is_file():
+    try:
+        paths = load_neupan_config_paths(config_path)
+    except ValueError as error:
         return [
             CheckResult(
                 "NeuPAN config",
                 "FAIL",
-                f"config file does not exist: {config_path}",
+                str(error),
             )
         ]
-
-    config_text = config_path.read_text(encoding="utf-8")
-    return check_neupan_config_contents(config_text)
+    return [
+        CheckResult("NeuPAN robot config", "PASS", str(paths.robot_config)),
+        CheckResult("NeuPAN planner config", "PASS", str(paths.planner_config)),
+        CheckResult("MK-mini DUNE checkpoint", "PASS", str(paths.dune_checkpoint)),
+    ]
 
 
 def parse_topic_list(output: str) -> set[str]:
@@ -271,7 +393,8 @@ def check_topic_rate(
             "FAIL",
             (
                 f"no average rate within {topic_check.timeout_sec:.1f}s; "
-                "for /plan, make sure Nav2 is actively publishing a plan"
+                "for /plan, make sure the selected global planner or path "
+                "publisher is actively publishing"
             ),
         )
     if result.returncode != 0:
@@ -284,8 +407,9 @@ def check_topic_rate(
         f"Rate {topic_check.topic}",
         "FAIL",
         (
-            f"could not read average rate; for /plan, send a Nav2 goal "
-            f"or wait up to {topic_check.timeout_sec:.1f}s for planner output"
+            "could not read average rate; for /plan, trigger the selected "
+            "global planner or path publisher, or wait up to "
+            f"{topic_check.timeout_sec:.1f}s for output"
         ),
     )
 
@@ -470,6 +594,12 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         description="Run Thor readiness checks before launching NeuPAN on MK-mini.",
     )
     parser.add_argument(
+        "--runtime-manifest",
+        type=Path,
+        default=None,
+        help="Thor runtime lock containing the exact installed torch version.",
+    )
+    parser.add_argument(
         "--neupan-config",
         type=Path,
         default=None,
@@ -499,7 +629,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     config_path = args.neupan_config or default_neupan_config_path()
     results: list[CheckResult] = []
 
+    results.extend(check_thor_runtime_manifest(args.runtime_manifest))
     results.extend(check_python_modules())
+    results.append(check_cvxpylayer_autograd())
     results.extend(check_neupan_config(config_path))
     preflight_launch_args, launch_arg_results = build_preflight_launch_args(
         args.launch_args,

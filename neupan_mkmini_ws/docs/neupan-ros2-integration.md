@@ -25,21 +25,24 @@ bash scripts/bootstrap_jazzy.sh
 source install/setup.bash
 ```
 
+`requirements-thor.txt` 只锁定普通 Python 依赖，不指定 PyTorch wheel。GPU Torch、CUDA 和 cuDNN 来自 `docker/Dockerfile` 固定且包含 `linux/arm64` 的 NVIDIA PyTorch 多架构基础镜像。镜像构建时自动把精确的 `torch.__version__`、`torch.version.cuda` 和基础镜像标签写入 `/etc/mkmini/thor-runtime.lock.json`；容器启动脚本通过 `MKMINI_THOR_RUNTIME_MANIFEST` 把该清单交给 bootstrap、独立 runtime 检查和 ROS preflight。缺失、空值或版本不匹配均失败关闭，仓库中的 `thor-runtime.lock.example.json` 仅作为格式示例。
+
 为 MK-mini 配置 `neupan_ros2`：
 
 - kinematics：`acker`
 - wheelbase：`0.6`
-- 最大速度：`0.3 m/s`
+- 最大速度：`0.6 m/s`（参考速度 `0.55 m/s`）
 - 最大转向角：`0.436332 rad`（`25 deg`）
 - 输入激光话题：`/scan`
 - 输入路径话题：`/plan`
 - TF：`map -> base_link`
 - 输出话题：`/neupan_cmd_vel`
 
-使用 `config/neupan_mkmini.yaml` 作为几何和训练基线。启动 NeuPAN 前，必须替换
-`REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT`。
-这里的 `0.3 m/s` 是 NeuPAN 安全桥限速；底盘 SDK 自带 `/cmd_vel` 适配器默认上限为
-`0.8 m/s`，NeuPAN 控制期间不能绕过安全桥直接使用该适配器。
+使用 `config/robots/mkmini/robot.yaml` 作为官方 ROS 参数入口，规划器参数位于同目录
+`planner.yaml`。wrapper 只接收该 ROS 参数 YAML 和 `robot_config_dir`；不要传入旧的
+`config_file`、`config_path` 或 `planner_config` 覆盖参数。
+NeuPAN 安全桥把非零前进命令提升到最低可响应速度 `0.5 m/s`，并在 `0.6 m/s`
+硬限幅；底盘 SDK 自带 `/cmd_vel` 适配器使用相同上限。NeuPAN 控制期间不能绕过安全桥。
 
 当前仓库不会假设已经有 MK-mini 专用 DUNE checkpoint。未完成训练前，只能验证
 `/neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd` 的桥接和安全逻辑，以及
@@ -50,8 +53,10 @@ NeuPAN 实车闭环复现。训练参数以 MK-mini 实车几何为准：`wheelb
 checkpoint 必须使用 Thor 运行时可见的绝对路径，例如：
 
 ```yaml
-pan:
-  dune_checkpoint: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
+neupan_node:
+  ros__parameters:
+    planner_config_file: planner.yaml
+    dune_checkpoint_file: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
 ```
 
 NeuPAN 不直接消费 MID-360 点云。它需要 `/scan` `sensor_msgs/LaserScan` 和 `/plan`
@@ -74,7 +79,7 @@ ros2 launch mkmini_neupan_bringup full_stack.launch.py \
   start_neupan:=true
 ```
 
-若 `neupan_ros2` 未通过 `mkmini_neupan.repos` 导入并构建，或 checkpoint 仍是占位符，
+若 `neupan_ros2` 未通过锁文件导入并构建，或 planner/checkpoint 路径无效，
 `neupan.launch.py` 会直接报错退出，避免进入没有算法输出的假闭环状态。
 
 ## 推荐的上游改进

@@ -1,6 +1,7 @@
 #include "yhs_can_control/yhs_can_control_node.hpp"
 
 #include <cerrno>
+#include <chrono>
 #include <cstring>
 #include <stdexcept>
 
@@ -17,6 +18,12 @@ namespace
 {
 
 constexpr double kDegToRad = 3.14159265358979323846 / 180.0;
+
+double steady_now_sec()
+{
+  return std::chrono::duration<double>(
+    std::chrono::steady_clock::now().time_since_epoch()).count();
+}
 
 template<typename T>
 T declare_and_get(
@@ -47,12 +54,50 @@ CanControl::CanControl(rclcpp::Node::SharedPtr node)
   ultrasonic_number_ = declare_and_get<std::vector<int64_t>>(
     node_, "ultrasonic_number", std::vector<int64_t>{0, 1, 2, 3, 4, 5, 6, 7});
 
+  ControlCommandGateConfig control_config;
+  control_config.max_velocity_mps =
+    declare_and_get<double>(node_, "max_velocity_mps", control_config.max_velocity_mps);
+  control_config.max_steering_deg =
+    declare_and_get<double>(node_, "max_steering_deg", control_config.max_steering_deg);
+  control_config.command_timeout_sec =
+    declare_and_get<double>(node_, "command_timeout_sec", control_config.command_timeout_sec);
+  control_config.send_rate_hz =
+    declare_and_get<double>(node_, "send_rate_hz", control_config.send_rate_hz);
+  control_config.allow_reverse =
+    declare_and_get<bool>(node_, "allow_reverse", control_config.allow_reverse);
+  control_config.forward_gear = static_cast<std::uint8_t>(
+    declare_and_get<int>(node_, "forward_gear", control_config.forward_gear));
+  control_config.reverse_gear = static_cast<std::uint8_t>(
+    declare_and_get<int>(node_, "reverse_gear", control_config.reverse_gear));
+
   if (wheel_base_ <= 0.0) {
     throw std::runtime_error("wheel_base 必须大于 0");
   }
   if (!validate_ultrasonic_mapping()) {
     throw std::runtime_error("ultrasonic_number 必须包含 8 个索引，且每个索引都在 [0, 7] 范围内");
   }
+  if (!std::isfinite(control_config.max_velocity_mps) ||
+    control_config.max_velocity_mps <= 0.0)
+  {
+    throw std::runtime_error("max_velocity_mps 必须是大于 0 的有限值");
+  }
+  if (!std::isfinite(control_config.max_steering_deg) ||
+    control_config.max_steering_deg <= 0.0)
+  {
+    throw std::runtime_error("max_steering_deg 必须是大于 0 的有限值");
+  }
+  if (!std::isfinite(control_config.command_timeout_sec) ||
+    control_config.command_timeout_sec <= 0.0)
+  {
+    throw std::runtime_error("command_timeout_sec 必须是大于 0 的有限值");
+  }
+  if (!std::isfinite(control_config.send_rate_hz) || control_config.send_rate_hz <= 0.0) {
+    throw std::runtime_error("send_rate_hz 必须是大于 0 的有限值");
+  }
+  if (control_config.forward_gear != 4 || control_config.reverse_gear != 2) {
+    throw std::runtime_error("MK-mini 官方前进/倒车挡位必须分别为 D=4 和 R=2");
+  }
+  control_command_gate_ = ControlCommandGate(control_config);
 
   // 原厂接口：上层可以直接发 /io_cmd 和 /ctrl_cmd；Nav2 的 /cmd_vel 会先由适配节点转成 /ctrl_cmd。
   io_cmd_subscriber_ = node_->create_subscription<yhs_can_interfaces::msg::IoCmd>(
@@ -62,6 +107,11 @@ CanControl::CanControl(rclcpp::Node::SharedPtr node)
   ctrl_cmd_subscriber_ = node_->create_subscription<yhs_can_interfaces::msg::CtrlCmd>(
     "ctrl_cmd", rclcpp::SensorDataQoS(),
     std::bind(&CanControl::ctrl_cmd_callback, this, std::placeholders::_1));
+
+  const auto send_period = std::chrono::duration<double>(1.0 / control_config.send_rate_hz);
+  ctrl_send_timer_ = node_->create_wall_timer(
+    std::chrono::duration_cast<std::chrono::nanoseconds>(send_period),
+    std::bind(&CanControl::send_control_command, this));
 
   chassis_info_fb_publisher_ =
     node_->create_publisher<yhs_can_interfaces::msg::ChassisInfoFb>("chassis_info_fb", 10);
@@ -109,19 +159,22 @@ void CanControl::io_cmd_callback(const yhs_can_interfaces::msg::IoCmd::SharedPtr
 
 void CanControl::ctrl_cmd_callback(const yhs_can_interfaces::msg::CtrlCmd::SharedPtr ctrl_cmd_msg)
 {
-  if (ctrl_cmd_msg->ctrl_cmd_velocity < 0.0f) {
-    RCLCPP_WARN_THROTTLE(
-      node_->get_logger(),
-      *node_->get_clock(), 2000,
-      "忽略负数 ctrl_cmd_velocity。倒车请使用 cmd_vel 适配器并设置 allow_reverse=true。");
-    return;
-  }
-
   mk_mini::CtrlCommand command;
   command.gear = ctrl_cmd_msg->ctrl_cmd_gear;
   command.velocity_mps = ctrl_cmd_msg->ctrl_cmd_velocity;
   command.steering_deg = ctrl_cmd_msg->ctrl_cmd_steering;
 
+  std::lock_guard<std::mutex> lock(control_command_gate_mutex_);
+  control_command_gate_.update(command, steady_now_sec());
+}
+
+void CanControl::send_control_command()
+{
+  mk_mini::CtrlCommand command;
+  {
+    std::lock_guard<std::mutex> lock(control_command_gate_mutex_);
+    command = control_command_gate_.command_for_send(steady_now_sec());
+  }
   ctrl_alive_count_ = static_cast<std::uint8_t>((ctrl_alive_count_ + 1) & 0x0f);
   write_frame(mk_mini::kCtrlCmdId, mk_mini::encodeCtrlCommand(command, ctrl_alive_count_));
 }

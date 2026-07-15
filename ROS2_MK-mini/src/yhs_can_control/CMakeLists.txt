@@ -22,13 +22,20 @@ target_include_directories(mk_mini_protocol PUBLIC
   $<INSTALL_INTERFACE:include>)
 target_compile_features(mk_mini_protocol PUBLIC cxx_std_17)
 
+# ROS-independent command validation and watchdog, shared by the CAN node and gtest.
+add_library(control_command_gate src/control_command_gate.cpp)
+target_include_directories(control_command_gate PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_compile_features(control_command_gate PUBLIC cxx_std_17)
+
 # 底盘 CAN 桥接节点：负责 SocketCAN 收发、底盘反馈解析、/odom 和 TF。
 add_executable(yhs_can_control_node src/yhs_can_control_node.cpp)
 target_include_directories(yhs_can_control_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_compile_features(yhs_can_control_node PUBLIC c_std_99 cxx_std_17)
-target_link_libraries(yhs_can_control_node mk_mini_protocol)
+target_link_libraries(yhs_can_control_node mk_mini_protocol control_command_gate)
 ament_target_dependencies(
   yhs_can_control_node
   tf2_ros
@@ -69,6 +76,7 @@ ament_target_dependencies(
 
 install(TARGETS
   mk_mini_protocol
+  control_command_gate
   yhs_can_control_node
   cmd_vel_to_ctrl_cmd_node
   odom_distance_test_node
@@ -99,6 +107,9 @@ if(BUILD_TESTING)
   ament_add_gtest(test_odom_distance_test_logic test/test_odom_distance_test_logic.cpp)
   target_include_directories(test_odom_distance_test_logic PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+
+  ament_add_gtest(test_control_command_gate test/test_control_command_gate.cpp)
+  target_link_libraries(test_control_command_gate control_command_gate)
 endif()
 
 ament_package()

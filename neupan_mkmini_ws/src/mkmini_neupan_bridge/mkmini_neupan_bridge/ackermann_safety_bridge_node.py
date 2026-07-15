@@ -19,7 +19,8 @@ class AckermannSafetyBridgeNode(Node):
             command_timeout_sec=self._param("command_timeout_sec", 0.3),
             feedback_timeout_sec=self._param("feedback_timeout_sec", 0.5),
             localization_timeout_sec=self._param("localization_timeout_sec", 0.3),
-            max_speed_mps=self._param("max_speed_mps", 0.3),
+            min_drive_speed_mps=self._param("min_drive_speed_mps", 0.5),
+            max_speed_mps=self._param("max_speed_mps", 0.6),
             max_steering_deg=self._param("max_steering_deg", 25.0),
             allow_reverse=self._param("allow_reverse", False),
             forward_gear=self._param("forward_gear", 4),
@@ -89,8 +90,31 @@ class AckermannSafetyBridgeNode(Node):
         healthy = chassis_feedback_is_healthy(
             fault_level=int(diagnostic.veh_fb_fault_level),
             auto_can_ctrl=bool(diagnostic.veh_fb_auto_can_ctrl_cmd),
-            auxiliary_scram=bool(diagnostic.veh_fb_aux_scram),
+            eps_offline=bool(diagnostic.veh_fb_eps_dis_on_line),
             eps_fault=bool(diagnostic.veh_fb_eps_fault),
+            eps_mosfet_overtemp=bool(diagnostic.veh_fb_eps_mosf_et_ot),
+            eps_warning=bool(diagnostic.veh_fb_eps_warning),
+            eps_not_working=bool(diagnostic.veh_fb_eps_dis_work),
+            eps_overcurrent=bool(diagnostic.veh_fb_eps_over_current),
+            ehb_ecu_fault=bool(diagnostic.veh_fb_ehb_ecu_fault),
+            ehb_offline=bool(diagnostic.veh_fb_ehb_dis_on_line),
+            ehb_work_mode_fault=bool(diagnostic.veh_fb_ehb_work_model_fault),
+            ehb_enable_fault=bool(diagnostic.veh_fb_ehb_dis_en),
+            ehb_angle_fault=bool(diagnostic.veh_fb_ehb_anguler_fault),
+            ehb_overtemp=bool(diagnostic.veh_fb_ehb_ot),
+            ehb_power_fault=bool(diagnostic.veh_fb_ehb_power_fault),
+            ehb_sensor_fault=bool(diagnostic.veh_fb_ehb_sensor_abnomal),
+            ehb_motor_fault=bool(diagnostic.veh_fb_ehb_motor_fault),
+            ehb_oil_pressure_sensor_fault=bool(
+                diagnostic.veh_fb_ehb_oil_press_sensor_fault
+            ),
+            ehb_oil_fault=bool(diagnostic.veh_fb_ehb_oil_fault),
+            left_drive_mcu_fault=int(diagnostic.veh_fb_ld_rv_mcu_fault),
+            right_drive_mcu_fault=int(diagnostic.veh_fb_rd_rv_mcu_fault),
+            auxiliary_bms_offline=bool(diagnostic.veh_fb_aux_bms_dis_on_line),
+            auxiliary_scram=bool(diagnostic.veh_fb_aux_scram),
+            remote_closed=bool(diagnostic.veh_fb_aux_remote_close),
+            remote_offline=bool(diagnostic.veh_fb_aux_remote_dis_on_line),
             require_auto_can_mode=self._require_auto_can_mode,
         )
         self._bridge.update_feedback(healthy, self._now_sec())
@@ -102,7 +126,6 @@ class AckermannSafetyBridgeNode(Node):
         decision = self._bridge.evaluate(now_sec)
 
         output = CtrlCmd()
-        output.header.stamp = now.to_msg()
         output.ctrl_cmd_gear = decision.command.gear
         output.ctrl_cmd_velocity = decision.command.velocity_mps
         output.ctrl_cmd_steering = decision.command.steering_deg

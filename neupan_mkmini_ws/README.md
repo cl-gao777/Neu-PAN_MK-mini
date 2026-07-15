@@ -5,13 +5,13 @@
 核心链路如下：
 
 ```text
-MID-360 /livox/lidar CustomMsg -> FAST-LIO2 -> /odom 与 TF
+MID-360 /livox/lidar CustomMsg -> FAST-LIO2 -> /Odometry 与 camera_init -> body TF
 MID-360 /livox/lidar CustomMsg -> /livox/points PointCloud2 -> RViz 或 /scan
-/livox/points -> /scan -> SLAM Toolbox / Nav2 / NeuPAN
-Nav2 /plan -> NeuPAN -> /neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd
+/livox/points -> /scan -> NeuPAN（SLAM/Global Planner 可选）
+任意 Global Planner 或 Path Publisher /plan -> NeuPAN -> /neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd
 ```
 
-仓库不会直接包含上游项目源码。请使用 `scripts/import_upstreams.sh` 导入 `mkmini_neupan.repos` 中声明的依赖，并将厂商提供的 `yhs_can_control` 与 `yhs_can_interfaces` 复制到 `src/`。
+仓库不会直接包含上游项目源码。请使用 `scripts/import_upstreams.sh`；脚本优先导入 `mkmini_neupan.lock.repos`，缺失时才回退到 `mkmini_neupan.repos`，并将厂商提供的 `yhs_can_control` 与 `yhs_can_interfaces` 复制到 `src/`。
 
 ## 已实现内容
 
@@ -29,7 +29,8 @@ Nav2 /plan -> NeuPAN -> /neupan_cmd_vel -> /neupan/ackermann_cmd -> /ctrl_cmd
 3. 安全桥启动后默认未解锁；在收到 `/veh_diag_fb` 健康整车诊断反馈和明确的解锁消息前，只发布零速度命令。
 4. 每次真机运动测试必须保留遥控器、物理急停和独立安全员。
 5. 正式配置会监控 `map -> base_link`；TF 缺失、过期或时间异常时，安全桥会停车。
-6. 真机运动前必须选定唯一的 `odom -> base_link` 发布者；FAST-LIO2 与底盘驱动不能同时发布该 TF。
+6. FAST_LIO 固定发布 `/Odometry` 和动态 `camera_init -> body`。底盘 `/odom` 仅作诊断，`publish_odom_tf` 必须为 false。
+7. `config/fast_lio_tf.yaml` 默认为 `calibrated: false`；启用 `start_fast_lio_tf:=true` 时会故意失败，直到提供实测外参。
 
 ## Thor / ROS2 Jazzy 环境准备
 
@@ -50,11 +51,28 @@ bash scripts/import_upstreams.sh
 然后安装 ROS 依赖、建立 Python venv、安装本地 `NeuPAN` 包并构建：
 
 ```bash
-bash scripts/bootstrap_jazzy.sh
+bash scripts/bootstrap_jazzy.sh --profile core
 source install/setup.bash
 ```
 
-如果 `bootstrap_jazzy.sh` 报 `torch` 缺失，请先安装 NVIDIA/Thor 兼容的 PyTorch。若缺少 `cvxpy` 或 `cvxpylayers`，在 `.venv` 中补齐后重新运行 `python3 scripts/check_neupan_runtime.py`。
+`core` 是真机复现默认配置。需要 Nav2 global planner 时使用
+`--profile nav2-planner`；需要完整 Nav2、SLAM Toolbox 和 RViz 调试环境时
+使用 `--profile full-debug`。
+
+Torch、CUDA 和 cuDNN 由 `docker/Dockerfile` 固定且已确认包含 `linux/arm64` 的 NVIDIA PyTorch 基础镜像提供，不在 venv 中安装或猜测普通 PyPI wheel。镜像构建时会读取：
+
+```bash
+python3 -c 'import torch; print(torch.__version__); print(torch.version.cuda)'
+```
+
+并自动写入镜像内的 `/etc/mkmini/thor-runtime.lock.json`。`run_mkmini_dev.sh` 将该路径通过 `MKMINI_THOR_RUNTIME_MANIFEST` 传给 bootstrap 和 preflight；文件缺失、版本不一致或 Torch 无法访问 GPU 时直接失败。仓库中的 `thor-runtime.lock.example.json` 仅说明格式，不作为运行时锁。其余 Python 包由 `requirements-thor.txt` 固定版本。
+
+在 Thor 上启动容器后可确认：
+
+```bash
+python3 -c 'import torch; print(torch.__version__); print(torch.version.cuda); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))'
+cat /etc/mkmini/thor-runtime.lock.json
+```
 
 优先构建底盘驱动和本工作区的集成包时，可使用：
 
@@ -100,7 +118,7 @@ ros2 launch mkmini_neupan_bringup mid360_rviz.launch.py
 
 这个阶段只用于确认 MID-360、FAST-LIO 和 RViz 点云显示。它不会启动 `/scan`、SLAM Toolbox、Nav2 或 NeuPAN。
 
-## 阶段 2：接入 `/scan`、Nav2 和安全桥
+## 阶段 2：接入 `/scan`、外部 `/plan` 和安全桥
 
 当 FAST-LIO 已在另一个终端运行时，`full_stack.launch.py` 不应重复启动 MID-360 driver。推荐让 `full_stack.launch.py start_scan_pipeline:=true` 负责 `/livox/lidar -> /livox/points -> /scan`，因此 FAST-LIO 终端建议关闭可视化旁路：
 
@@ -112,13 +130,16 @@ ros2 launch mkmini_neupan_bringup fast_lio_mid360.launch.py \
   start_rviz:=false
 ```
 
-另一个终端启动感知、SLAM、Nav2 和安全桥：
+另一个终端启动扫描转换和安全桥；`/plan` 由选定的 global planner 或
+测试 path publisher 单独提供：
 
 ```bash
 ros2 launch mkmini_neupan_bringup full_stack.launch.py \
   start_mid360:=false \
   start_visualization_cloud:=false \
   start_scan_pipeline:=true \
+  start_slam:=false \
+  start_navigation:=false \
   start_neupan:=false
 ```
 
@@ -131,13 +152,15 @@ ros2 launch mkmini_neupan_bringup full_stack.launch.py start_mid360:=true
 
 ## 阶段 3：启用 NeuPAN 闭环
 
-训练并替换 MK-mini DUNE checkpoint 后，才允许显式打开 NeuPAN。`config/neupan_mkmini.yaml` 中若仍包含 `REPLACE_WITH_TRAINED_MKMINI_DUNE_CHECKPOINT`，`neupan.launch.py` 会立即失败，避免进入没有算法输出的假闭环状态。
+NeuPAN 使用官方两层配置：`config/robots/mkmini/robot.yaml` 是 ROS 参数文件，`planner_config_file` 指向同目录 `planner.yaml`，`dune_checkpoint_file` 指向 Thor 可见的 checkpoint。任一文件不存在时 `neupan.launch.py` 会立即失败。
 
 推荐把 checkpoint 放在 Thor 可见的稳定路径，并在配置中使用绝对路径，例如：
 
 ```yaml
-pan:
-  dune_checkpoint: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
+neupan_node:
+  ros__parameters:
+    planner_config_file: planner.yaml
+    dune_checkpoint_file: /workspaces/MK-mini_ws/neupan_mkmini_ws/checkpoints/dune/model_5000.pth
 ```
 
 真机上推荐使用宿主机一键入口：
@@ -161,7 +184,8 @@ bash scripts/start_real_robot_neupan.sh
 
 ```bash
 bash docker/start_real_robot_neupan.sh \
-  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/neupan_site.yaml \
+  --neupan-config /workspaces/MK-mini_ws/neupan_mkmini_ws/config/robots/site/robot.yaml \
+  fast_lio_tf_config:=/workspaces/MK-mini_ws/neupan_mkmini_ws/config/fast_lio_tf_site.yaml \
   start_mid360:=true \
   start_scan_pipeline:=true
 ```
@@ -178,7 +202,9 @@ preflight 使用的 launch 参数应与正式启动保持一致，只是不要�
 
 ```bash
 ros2 run mkmini_neupan_bringup thor_neupan_preflight \
-  start_mid360:=false \
+  start_mid360:=true \
+  start_fast_lio:=true \
+  start_fast_lio_tf:=true \
   start_visualization_cloud:=false \
   start_scan_pipeline:=true
 ```
@@ -187,7 +213,7 @@ ros2 run mkmini_neupan_bringup thor_neupan_preflight \
 
 ```bash
 ros2 run mkmini_neupan_bringup thor_neupan_preflight \
-  --neupan-config /absolute/path/to/neupan_mkmini.yaml \
+  --neupan-config /absolute/path/to/robot.yaml \
   start_scan_pipeline:=true
 ```
 
@@ -195,7 +221,9 @@ ros2 run mkmini_neupan_bringup thor_neupan_preflight \
 
 ```bash
 ros2 launch mkmini_neupan_bringup full_stack.launch.py \
-  start_mid360:=false \
+  start_mid360:=true \
+  start_fast_lio:=true \
+  start_fast_lio_tf:=true \
   start_visualization_cloud:=false \
   start_scan_pipeline:=true \
   start_neupan:=true
@@ -214,7 +242,8 @@ ros2 topic hz /neupan/ackermann_cmd
 ros2 launch mkmini_neupan_bringup full_stack.launch.py \
   start_scan_pipeline:=true \
   start_neupan:=true \
-  neupan_config:=/absolute/path/to/neupan_mkmini.yaml
+  neupan_config:=/absolute/path/to/robot.yaml \
+  fast_lio_tf_config:=/absolute/path/to/fast_lio_tf_site.yaml
 ```
 
 完成架空轮安全检查后，使用以下命令解锁：
