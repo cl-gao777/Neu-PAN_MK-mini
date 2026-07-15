@@ -103,7 +103,7 @@ ros2 run tf2_ros tf2_echo odom base_link
 ros2 run yhs_can_control odom_distance_test_node --ros-args \
   -p armed:=true \
   -p target_distance_m:=0.5 \
-  -p target_speed_mps:=0.3
+  -p target_speed_mps:=0.5
 ```
 
 预期现象：
@@ -121,10 +121,10 @@ ros2 run yhs_can_control odom_distance_test_node --ros-args \
 
 | 轮次 | 目标距离 | 目标速度 | 重复次数 |
 | --- | --- | --- | --- |
-| 1 | `0.5 m` | `0.3 m/s` | 3 |
-| 2 | `1.0 m` | `0.3 m/s` | 3 |
-| 3 | `2.0 m` | `0.3 m/s` | 3 |
-| 4 | `1.0 m` | `0.5 m/s` | 3 |
+| 1 | `0.5 m` | `0.5 m/s` | 3 |
+| 2 | `1.0 m` | `0.5 m/s` | 3 |
+| 3 | `2.0 m` | `0.5 m/s` | 3 |
+| 4 | `1.0 m` | `0.6 m/s` | 3 |
 | 5 | `2.0 m` | `0.5 m/s` | 3 |
 
 示例命令：
@@ -133,7 +133,7 @@ ros2 run yhs_can_control odom_distance_test_node --ros-args \
 ros2 run yhs_can_control odom_distance_test_node --ros-args \
   -p armed:=true \
   -p target_distance_m:=1.0 \
-  -p target_speed_mps:=0.3 \
+  -p target_speed_mps:=0.5 \
   -p log_csv_path:=/tmp/mkmini_odom_test.csv
 ```
 
@@ -172,7 +172,7 @@ CSV 日志字段：
 
 | 日期 | 目标距离 | 目标速度 | `/odom` 距离 | 底盘累计里程增量 | 实测距离 | 误差率 | 横向偏移 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| | `1.0 m` | `0.3 m/s` | | | | | | |
+| | `1.0 m` | `0.5 m/s` | | | | | | |
 
 ## 初始验收标准
 

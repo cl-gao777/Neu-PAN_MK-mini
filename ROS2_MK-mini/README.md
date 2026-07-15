@@ -159,7 +159,7 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-  "{linear: {x: 0.3}, angular: {z: 0.0}}"
+  "{linear: {x: 0.5}, angular: {z: 0.0}}"
 ```
 
 停止：
@@ -197,7 +197,7 @@ Nav2 或 NeuPAN 上层控制器
 ros2 run yhs_can_control odom_distance_test_node --ros-args \
   -p armed:=true \
   -p target_distance_m:=1.0 \
-  -p target_speed_mps:=0.3
+  -p target_speed_mps:=0.5
 ```
 
 该节点会：
@@ -246,7 +246,7 @@ colcon test-result --verbose
 - 车辆架空或处在受控低速测试区。
 - 有物理急停或遥控器接管能力。
 - CAN 线束、供电和终端电阻确认无误。
-- 初始速度使用实测可响应下限 `0.3 m/s`，并确保测试区域和急停条件满足安全要求。
+- 初始速度使用实测可响应下限 `0.5 m/s`，硬上限保持 `0.6 m/s`，并确保测试区域和急停条件满足安全要求。
 - 先确认 `/chassis_info_fb`、`/veh_diag_fb`、`/odom` 和 TF 正常，再发送运动命令。
 
 任何异常都应立即发送零速度命令，并使用物理急停或遥控器接管。

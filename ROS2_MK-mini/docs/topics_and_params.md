@@ -97,7 +97,7 @@ ros2 launch yhs_can_control yhs_can_control.launch.py
 | `wheel_base` | `0.6` | 用于 Ackermann 转向换算的轴距。 |
 | `ctrl_cmd_publish_rate_hz` | `50.0` | 保活控制指令发布频率。 |
 | `cmd_vel_timeout_sec` | `0.3` | 超时后发布停车指令的等待时间。 |
-| `max_velocity_mps` | `0.8` | 对底盘 SDK `/cmd_vel` 适配器生效的绝对速度限幅。 |
+| `max_velocity_mps` | `0.6` | 对底盘 SDK `/cmd_vel` 适配器生效的绝对速度硬限幅。 |
 | `max_steering_deg` | `25.0` | 绝对转角限幅。 |
 | `allow_reverse` | `false` | 未显式启用时拒绝倒车 `/cmd_vel` 指令。 |
 | `use_stamped_cmd_vel` | `false` | 在 `input_topic` 上使用 `TwistStamped` 而不是 `Twist`。 |

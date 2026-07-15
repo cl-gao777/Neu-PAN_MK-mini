@@ -28,7 +28,7 @@
 
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
-| `max_velocity_mps` | `0.8` | 底盘 SDK `/cmd_vel` 适配器速度限幅，单位 m/s。 |
+| `max_velocity_mps` | `0.6` | 底盘 SDK `/cmd_vel` 适配器速度硬限幅，单位 m/s。 |
 | `max_steering_deg` | `25.0` | 最大转向角，单位度。 |
 | `allow_reverse` | `false` | 默认禁止倒车。 |
 | `cmd_vel_timeout_sec` | `0.3` | 超时停车时间，单位秒。 |
@@ -194,14 +194,14 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.3}, angular: {z: 0.0}}"
+"{linear: {x: 0.5}, angular: {z: 0.0}}"
 ```
 
 转向测试：
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.3}, angular: {z: 0.1}}"
+"{linear: {x: 0.5}, angular: {z: 0.1}}"
 ```
 
 停止测试：

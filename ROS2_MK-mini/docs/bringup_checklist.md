@@ -131,7 +131,7 @@ ros2 run tf2_ros tf2_echo odom base_link
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.3}, angular: {z: 0.0}}"
+"{linear: {x: 0.5}, angular: {z: 0.0}}"
 ```
 
 预期结果：
@@ -145,7 +145,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.3}, angular: {z: 0.1}}"
+"{linear: {x: 0.5}, angular: {z: 0.1}}"
 ```
 
 预期结果：
@@ -180,7 +180,7 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
 只有架空车轮检查通过后，才继续地面测试。
 
 - [ ] 使用空旷、平整的测试区域。
-- [ ] 初始地面测试速度使用实测可响应下限 `0.3 m/s`；底盘 SDK `/cmd_vel` 适配器硬限幅为 `0.8 m/s`。
+- [ ] 初始地面测试速度使用实测可响应下限 `0.5 m/s`；底盘 SDK `/cmd_vel` 适配器硬限幅为 `0.6 m/s`，倒车保持禁用。
 - [ ] 保持有人靠近急停按钮。
 - [ ] 先发送短时 `/cmd_vel` 指令，不要直接进行连续导航。
 - [ ] 确认 `/odom` 方向与实际运动一致。
