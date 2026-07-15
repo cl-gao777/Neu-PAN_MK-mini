@@ -3,11 +3,14 @@
 ## 坐标系
 
 - `map -> odom`：在线建图期间由 SLAM Toolbox 发布。
-- `odom -> base_link`：由 FAST-LIO2 或底盘驱动发布，但两者不能同时发布。
-- `base_link -> livox_frame`：必须使用实测的静态变换，禁止使用未经测量的零变换。
+- `odom -> camera_init`：集成层发布单位静态变换。
+- `camera_init -> body`：FAST_LIO 固定发布的动态变换。
+- `body -> base_link`：实测 `base_link -> livox_frame` 的逆变换。
+- `base_link -> livox_frame`：必须使用实测静态变换，禁止使用未经测量的零变换。
 
-真机运动前必须选定唯一的 `odom -> base_link` 发布者。完整集成栈优先使用 FAST-LIO2；
-当 FAST-LIO2 负责该变换时，必须关闭底盘驱动中的 `publish_odom_tf`。
+这里假设 FAST_LIO 的 `body` 与 MID360 IMU/livox 物理坐标系重合。完整链为
+`odom -> camera_init -> body -> base_link -> livox_frame`。配置默认
+`calibrated: false`，启用 TF 集成时会 fail-safe 退出；底盘 `publish_odom_tf` 必须关闭。
 
 正式安全桥持续检查 `map -> base_link`。变换不可用、超过
 `localization_timeout_sec` 或时间戳异常时，安全桥发布零速度。
@@ -18,6 +21,8 @@
 | --- | --- | --- | --- |
 | `/livox/lidar` | `livox_ros_driver2/msg/CustomMsg` | Livox 驱动 | FAST-LIO2、custom-msg-to-pointcloud2 |
 | `/livox/points` | `sensor_msgs/PointCloud2` | custom-msg-to-pointcloud2 | pointcloud-to-laserscan、RViz |
+| `/Odometry` | `nav_msgs/Odometry` | FAST_LIO | Nav2、preflight |
+| `/odom` | `nav_msgs/Odometry` | YHS CAN 驱动 | 仅诊断 |
 | `/scan` | `sensor_msgs/LaserScan` | pointcloud-to-laserscan | SLAM Toolbox、Nav2、NeuPAN |
 | `/plan` | `nav_msgs/Path` | Nav2 planner | NeuPAN |
 | `/neupan_cmd_vel` | `geometry_msgs/Twist` | 上游 NeuPAN ROS2 | 仅兼容适配器 |

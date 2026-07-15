@@ -81,7 +81,7 @@ bash docker/start_real_robot_neupan.sh
 ros2 run mkmini_neupan_bringup thor_neupan_preflight
 ```
 
-preflight 会检查 Python 运行时、`neupan_mkmini.yaml` 与 MK-mini DUNE checkpoint、关键 ROS topic 和频率、`cmd_vel_to_ctrl_cmd_node` 冲突、`/ctrl_cmd` 发布者数量，以及 `map -> base_link` TF。最终输出 `RESULT  PASS` 后，脚本才进入正式启动：
+preflight 会检查 Python 运行时、MK-mini 的 `robot.yaml` / `planner.yaml` 配置与 DUNE checkpoint、关键 ROS topic 和频率、`cmd_vel_to_ctrl_cmd_node` 冲突、`/ctrl_cmd` 发布者数量，以及 `map -> base_link` TF。最终输出 `RESULT  PASS` 后，脚本才进入正式启动：
 
 ```bash
 ros2 launch mkmini_neupan_bringup full_stack.launch.py start_neupan:=true

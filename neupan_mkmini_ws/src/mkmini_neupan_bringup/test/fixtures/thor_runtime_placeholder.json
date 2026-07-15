@@ -1,0 +1,1 @@
+{"schema_version": 1, "platform": "NVIDIA Thor", "torch": {"version": "REPLACE_WITH_EXACT_THOR_TORCH_VERSION", "cuda_version": null}}

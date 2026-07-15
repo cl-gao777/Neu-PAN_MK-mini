@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "platform": "NVIDIA Thor JetPack 7.2 / L4T R39.2",
+  "pytorch_base_image": "nvcr.io/nvidia/pytorch:26.06-py3",
+  "livox_sdk2": {
+    "repository": "https://github.com/Livox-SDK/Livox-SDK2.git",
+    "commit": "f5d9375f84efe2b15bc0a052d3e18482ed13adf4"
+  },
+  "torch": {
+    "version": "IMAGE_GENERATED_EXACT_TORCH_VERSION",
+    "cuda_version": "13.2"
+  }
+}

@@ -10,7 +10,8 @@ ackermann_safety_bridge:
     command_timeout_sec: 0.3
     feedback_timeout_sec: 0.5
     localization_timeout_sec: 0.3
-    max_speed_mps: 0.3
+    min_drive_speed_mps: 0.5
+    max_speed_mps: 0.6
     max_steering_deg: 25.0
     allow_reverse: false
     forward_gear: 4

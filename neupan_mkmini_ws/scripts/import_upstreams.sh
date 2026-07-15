@@ -10,7 +10,7 @@ required_repos=(
   "src/neupan_ros2"
   "src/livox_ros_driver2"
   "src/FAST_LIO"
-  "src/yhs_robot_description"
+  "third_party/yhs_robot_description"
   "third_party/NeuPAN"
   "third_party/ir-sim"
 )
@@ -75,14 +75,29 @@ check_directory() {
   echo "OK ${path}"
 }
 
-if [[ ! -f "mkmini_neupan.repos" ]]; then
+repos_file="mkmini_neupan.lock.repos"
+if [[ ! -f "${repos_file}" ]]; then
+  repos_file="mkmini_neupan.repos"
+fi
+
+if [[ ! -f "${repos_file}" ]]; then
   fail "Run this script from the neupan_mkmini_ws workspace or keep mkmini_neupan.repos at the workspace root."
 fi
 
 require_command "vcs" "Install it with: sudo apt-get install -y python3-vcstool"
 
-echo "Importing upstream repositories from mkmini_neupan.repos..."
-vcs import . < mkmini_neupan.repos
+# Older workspace revisions imported the reference-only YHS description
+# collection under src/. It contains many ROS1/ROS2 packages with duplicate
+# names, so rosdep and colcon must not recursively scan it. Migrate it before
+# vcs import; third_party/ is excluded from colcon by bootstrap_jazzy.sh.
+if [[ -d src/yhs_robot_description && ! -e third_party/yhs_robot_description ]]; then
+  mkdir -p third_party
+  mv src/yhs_robot_description third_party/yhs_robot_description
+  echo "Moved reference descriptions to third_party/yhs_robot_description"
+fi
+
+echo "Importing upstream repositories from ${repos_file}..."
+vcs import . < "${repos_file}"
 
 echo "Freezing exact imported revisions..."
 bash scripts/freeze_revisions.sh

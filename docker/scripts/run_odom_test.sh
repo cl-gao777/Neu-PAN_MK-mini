@@ -3,8 +3,8 @@
 # Run the MK-mini odometry accuracy test inside the Docker container.
 #
 # Usage:
-#   bash run_odom_test.sh --distance 1.0 --speed 0.3
-#   bash run_odom_test.sh --distance 2.0 --speed 0.5 --csv /workspaces/MK-mini_ws/odom_test.csv
+#   bash run_odom_test.sh --distance 1.0 --speed 0.5
+#   bash run_odom_test.sh --distance 2.0 --speed 0.6 --csv /workspaces/MK-mini_ws/odom_test.csv
 #
 # This wraps odom_distance_test_node from yhs_can_control.
 # The yhs_can_control launch must already be running in another terminal.
@@ -23,7 +23,7 @@ ROS_SETUP="/opt/ros/jazzy/setup.bash"
 CHASSIS_INSTALL="/workspaces/MK-mini_ws/ROS2_MK-mini/install/setup.bash"
 
 TARGET_DISTANCE="1.0"
-TARGET_SPEED="0.3"
+TARGET_SPEED="0.5"
 CSV_PATH="/tmp/mkmini_odom_test.csv"
 ARMED="true"
 
@@ -33,13 +33,13 @@ Usage: bash run_odom_test.sh [OPTIONS]
 
 Options:
   --distance N    Target distance in meters (default: 1.0)
-  --speed N       Target speed in m/s (default: 0.3)
+  --speed N       Target speed in m/s (default: 0.5; maximum: 0.6)
   --csv PATH      CSV log output path (default: /tmp/mkmini_odom_test.csv)
   --dry-run       Print the command without executing (armed=false)
 
 Examples:
-  bash run_odom_test.sh --distance 0.5 --speed 0.3
-  bash run_odom_test.sh --distance 2.0 --speed 0.5 --csv /workspaces/MK-mini_ws/odom_results.csv
+  bash run_odom_test.sh --distance 0.5 --speed 0.5
+  bash run_odom_test.sh --distance 2.0 --speed 0.6 --csv /workspaces/MK-mini_ws/odom_results.csv
   bash run_odom_test.sh --dry-run
 EOF
     exit 0

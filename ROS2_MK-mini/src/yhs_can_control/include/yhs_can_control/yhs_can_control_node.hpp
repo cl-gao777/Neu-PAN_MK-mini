@@ -26,6 +26,7 @@
 #include "rclcpp/rclcpp.hpp"
 #include "tf2/LinearMath/Quaternion.h"
 #include "tf2_ros/transform_broadcaster.h"
+#include "yhs_can_control/control_command_gate.hpp"
 #include "yhs_can_control/mk_mini_protocol.hpp"
 #include "yhs_can_interfaces/msg/chassis_info_fb.hpp"
 #include "yhs_can_interfaces/msg/ctrl_cmd.hpp"
@@ -68,6 +69,8 @@ private:
 
   std::uint8_t ctrl_alive_count_{0};
   std::uint8_t io_alive_count_{0};
+  ControlCommandGate control_command_gate_;
+  std::mutex control_command_gate_mutex_;
 
   // 发布 /odom 使用的累计位姿。
   double x_{0.0};
@@ -81,6 +84,7 @@ private:
 
   rclcpp::Subscription<yhs_can_interfaces::msg::IoCmd>::SharedPtr io_cmd_subscriber_;
   rclcpp::Subscription<yhs_can_interfaces::msg::CtrlCmd>::SharedPtr ctrl_cmd_subscriber_;
+  rclcpp::TimerBase::SharedPtr ctrl_send_timer_;
 
   rclcpp::Publisher<yhs_can_interfaces::msg::ChassisInfoFb>::SharedPtr chassis_info_fb_publisher_;
   rclcpp::Publisher<yhs_can_interfaces::msg::VehDiagFb>::SharedPtr veh_diag_fb_publisher_;
@@ -89,6 +93,7 @@ private:
 
   void io_cmd_callback(const yhs_can_interfaces::msg::IoCmd::SharedPtr io_cmd_msg);
   void ctrl_cmd_callback(const yhs_can_interfaces::msg::CtrlCmd::SharedPtr ctrl_cmd_msg);
+  void send_control_command();
 
   bool wait_for_can_frame();
   void can_data_recv_callback();

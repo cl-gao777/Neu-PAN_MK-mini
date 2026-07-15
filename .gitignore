@@ -39,3 +39,7 @@ log/
 # OS files
 Thumbs.db
 .DS_Store
+neupan_mkmini_ws/pytest-cache-files-*/
+docker/Dockerfile.backup-*
+docker/Dockerfile.before-*
+docker/run_mkmini_dev.sh.before-*

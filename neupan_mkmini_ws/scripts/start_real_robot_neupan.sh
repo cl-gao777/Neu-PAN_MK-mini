@@ -10,9 +10,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WS_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 DEFAULT_LAUNCH_ARGS=(
-    "start_mid360:=false"
+    "start_mid360:=true"
+    "start_fast_lio:=true"
     "start_visualization_cloud:=false"
     "start_scan_pipeline:=true"
+    "start_slam:=false"
+    "start_navigation:=false"
+    "start_fast_lio_tf:=true"
 )
 
 DRY_RUN=0
@@ -37,9 +41,13 @@ Options:
   --dry-run                 Print commands without sourcing ROS or launching.
 
 Default launch arguments:
-  start_mid360:=false
+  start_mid360:=true
+  start_fast_lio:=true
   start_visualization_cloud:=false
   start_scan_pipeline:=true
+  start_slam:=false
+  start_navigation:=false
+  start_fast_lio_tf:=true
 
 Notes:
   start_neupan:=... is ignored here. Preflight forces false; final launch

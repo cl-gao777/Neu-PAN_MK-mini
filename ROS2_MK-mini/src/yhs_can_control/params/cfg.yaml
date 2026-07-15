@@ -10,6 +10,14 @@ yhs_can_control_node:
     publish_odom_tf: true
     odom_frame_id: "odom"
     base_frame_id: "base_link"
+    # 驱动层独立安全门：即使上游适配器失效，也会限幅并在超时后持续发送停车帧。
+    max_velocity_mps: 0.6
+    max_steering_deg: 25.0
+    command_timeout_sec: 0.3
+    send_rate_hz: 50.0
+    allow_reverse: false
+    forward_gear: 4
+    reverse_gear: 2
     # chassis_info_fb.ultrasonic 中的传感器顺序：
     # front_right, front_left, left_front, left_rear,
     # rear_left, rear_right, right_rear, right_front.
@@ -25,7 +33,7 @@ cmd_vel_to_ctrl_cmd_node:
     ctrl_cmd_publish_rate_hz: 50.0
     # 超过该时间没有新 /cmd_vel 时自动发布 0 速。
     cmd_vel_timeout_sec: 0.3
-    max_velocity_mps: 0.8
+    max_velocity_mps: 0.6
     max_steering_deg: 25.0
     # 默认禁止倒车，实车确认安全后才建议改为 true。
     allow_reverse: false

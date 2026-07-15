@@ -124,21 +124,21 @@ ros2 run tf2_ros tf2_echo odom base_link
 ## 7. 低速指令测试
 
 首次运动测试时，请架空驱动轮或使用受控测试区域。底盘 SDK 默认 `/cmd_vel`
-适配器将速度限制为 `0.8 m/s`，转角限制为 `25 deg`，并禁用倒车；现场测试确认
-MK-mini 最低可响应控制速度为 `0.3 m/s`，因此首次检查也使用 `0.3 m/s`。
+适配器将速度限制为 `0.6 m/s`，转角限制为 `25 deg`，并禁用倒车；现场测试确认
+MK-mini 最低可响应控制速度为 `0.5 m/s`，因此首次检查使用 `0.5 m/s`，通过后再验证 `0.6 m/s`。
 
 发布一次短暂的前进指令：
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.3}, angular: {z: 0.0}}"
+"{linear: {x: 0.5}, angular: {z: 0.0}}"
 ```
 
 发布一次轻微转向指令：
 
 ```bash
 ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
-"{linear: {x: 0.3}, angular: {z: 0.1}}"
+"{linear: {x: 0.5}, angular: {z: 0.1}}"
 ```
 
 如果超过 `cmd_vel_timeout_sec` 没有新指令，适配器应持续发布零速度

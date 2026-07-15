@@ -7,3 +7,9 @@ __pycache__/
 bags/
 results/
 third_party/
+src/FAST_LIO/
+src/livox_ros_driver2/
+src/neupan_ros2/
+src/yhs_can_control/
+src/yhs_can_interfaces/
+pytest-cache-files-*/

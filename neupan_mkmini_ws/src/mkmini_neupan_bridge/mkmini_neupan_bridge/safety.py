@@ -26,7 +26,8 @@ class BridgeConfig:
     command_timeout_sec: float = 0.3
     feedback_timeout_sec: float = 0.5
     localization_timeout_sec: float = 0.3
-    max_speed_mps: float = 0.3
+    min_drive_speed_mps: float = 0.5
+    max_speed_mps: float = 0.6
     max_steering_deg: float = 25.0
     allow_reverse: bool = False
     forward_gear: int = 4
@@ -39,12 +40,17 @@ class BridgeConfig:
             "command_timeout_sec": self.command_timeout_sec,
             "feedback_timeout_sec": self.feedback_timeout_sec,
             "localization_timeout_sec": self.localization_timeout_sec,
+            "min_drive_speed_mps": self.min_drive_speed_mps,
             "max_speed_mps": self.max_speed_mps,
             "max_steering_deg": self.max_steering_deg,
         }
         for name, value in positive_values.items():
             if not math.isfinite(value) or value <= 0.0:
                 raise ValueError(f"{name} must be finite and greater than zero")
+        if self.min_drive_speed_mps > self.max_speed_mps:
+            raise ValueError(
+                "min_drive_speed_mps must not exceed max_speed_mps"
+            )
 
         for name, value in {
             "forward_gear": self.forward_gear,
@@ -67,12 +73,19 @@ class SafetyBridge:
         self._localization_time_sec = None
         self._command = None
         self._command_time_sec = None
+        self._latched_safety_reason = None
+        self._latched_fault_disarmed = False
 
     def set_drive_enabled(self, enabled: bool, now_sec: float) -> None:
         was_enabled = self._drive_enabled
         self._drive_enabled = enabled
+        if not enabled and self._latched_safety_reason is not None:
+            self._latched_fault_disarmed = True
         if enabled and not was_enabled:
             self._drive_enabled_since = now_sec
+            if self._latched_fault_disarmed:
+                self._latched_safety_reason = None
+                self._latched_fault_disarmed = False
 
     def set_emergency_stop(self, active: bool, now_sec: float) -> None:
         was_active = self._emergency_stop
@@ -97,26 +110,28 @@ class SafetyBridge:
             return self._stop("emergency_stop")
         if not self._drive_enabled:
             return self._stop("drive_disabled")
+        if self._latched_safety_reason is not None:
+            return self._stop(self._latched_safety_reason)
         if self.config.require_feedback:
             if self._feedback_time_sec is None:
-                return self._stop("feedback_timeout")
+                return self._latch_stop("feedback_timeout")
             if not self._feedback_healthy:
-                return self._stop("feedback_fault")
+                return self._latch_stop("feedback_fault")
             feedback_age = now_sec - self._feedback_time_sec
             if not math.isfinite(feedback_age) or feedback_age < 0.0:
-                return self._stop("feedback_time_invalid")
+                return self._latch_stop("feedback_time_invalid")
             if feedback_age > self.config.feedback_timeout_sec:
-                return self._stop("feedback_timeout")
+                return self._latch_stop("feedback_timeout")
         if self.config.require_localization:
             if self._localization_time_sec is None:
-                return self._stop("localization_timeout")
+                return self._latch_stop("localization_timeout")
             if not self._localization_healthy:
-                return self._stop("localization_fault")
+                return self._latch_stop("localization_fault")
             localization_age = now_sec - self._localization_time_sec
             if not math.isfinite(localization_age) or localization_age < 0.0:
-                return self._stop("localization_time_invalid")
+                return self._latch_stop("localization_time_invalid")
             if localization_age > self.config.localization_timeout_sec:
-                return self._stop("localization_timeout")
+                return self._latch_stop("localization_timeout")
         if self._command is None or self._command_time_sec is None:
             return self._stop("no_command")
         activation_times = [
@@ -143,7 +158,15 @@ class SafetyBridge:
             if self._command.speed_mps < 0.0
             else self.config.forward_gear
         )
-        speed = min(abs(self._command.speed_mps), self.config.max_speed_mps)
+        requested_speed = abs(self._command.speed_mps)
+        speed = (
+            0.0
+            if requested_speed == 0.0
+            else max(
+                self.config.min_drive_speed_mps,
+                min(requested_speed, self.config.max_speed_mps),
+            )
+        )
         steering = math.degrees(self._command.steering_rad)
         steering = max(-self.config.max_steering_deg, min(steering, self.config.max_steering_deg))
         return BridgeDecision(CtrlCommand(gear, speed, steering), "active")
@@ -151,3 +174,9 @@ class SafetyBridge:
     def _stop(self, reason: str) -> BridgeDecision:
         command = CtrlCommand(self.config.forward_gear, 0.0, 0.0)
         return BridgeDecision(command, reason)
+
+    def _latch_stop(self, reason: str) -> BridgeDecision:
+        if self._latched_safety_reason is None:
+            self._latched_safety_reason = reason
+            self._latched_fault_disarmed = False
+        return self._stop(self._latched_safety_reason)

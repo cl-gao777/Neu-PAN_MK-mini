@@ -18,6 +18,6 @@ echo "${timestamp},${run_name},FILL_ME,FILL_ME,FILL_ME,FILL_ME,FILL_ME,FILL_ME" 
   >> "$result_path"
 
 exec ros2 bag record -o "$bag_path" \
-  /tf /tf_static /scan /map /odom /plan \
+  /tf /tf_static /scan /map /Odometry /odom /plan \
   /neupan_cmd_vel /neupan/ackermann_cmd /neupan/safety_status \
   /ctrl_cmd /chassis_info_fb /veh_diag_fb
